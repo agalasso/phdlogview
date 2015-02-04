@@ -244,8 +244,11 @@ void LogViewFrame::InitGraph()
     double mxy = 0.0;
     int mxmass = 0;
     double mxsnr = 0.0;
-    for (const auto& e : m_session->entries)
+    //for (const auto& e : m_session->entries)
+    for (auto it = m_session->entries.begin(); it != m_session->entries.end(); ++it)
     {
+        const auto& e = *it;
+
         double val = fabs(e.raraw);
         if (val > mxr)
             mxr = val;
@@ -293,8 +296,10 @@ void LogViewFrame::InitCalDisplay()
     disp.firstNorth = -1;
     double maxv = 0.0;
     int i = 0;
-    for (const auto& p : m_calibration->entries)
+    //for (const auto& p : m_calibration->entries)
+    for (auto it = m_calibration->entries.begin(); it != m_calibration->entries.end(); ++it)
     {
+        const auto& p = *it;
         if (p.direction == WEST)
         {
             if (disp.firstWest == -1) disp.firstWest = i;
@@ -348,8 +353,8 @@ void LogViewFrame::OnCellSelected( wxGridEvent& event )
         {
             wxWindowUpdateLocker lck(m_sessionInfo);
             m_sessionInfo->Clear();
-            for (const auto& s : section->hdr)
-                *m_sessionInfo << s << "\n";
+            for (auto it = section->hdr.begin(); it != section->hdr.end(); ++it)
+                *m_sessionInfo << *it << "\n";
             m_sessionInfo->SetInsertionPoint(0);
         }
 
@@ -753,7 +758,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     if (entries.size())
     {
         i0 = (unsigned int)std::max(ginfo.i0, 0.0);
-        i1 = std::min((unsigned int)ceil(ginfo.i1), entries.size() - 1);
+        i1 = std::min((size_t)ceil(ginfo.i1), entries.size() - 1);
     }
     else
     {
@@ -991,8 +996,10 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         const GuideSession::InfoVec& infos = m_session->infos;
         int prev_end = -999999;
         int row = 1;
-        for (const auto& info : infos)
+        //for (const auto& info : infos)
+        for (auto it = infos.begin(); it != infos.end(); ++it)
         {
+            const auto& info = *it;
             if (info.idx > i1)
                 break;
             int width = dc.GetTextExtent(info.info).x;

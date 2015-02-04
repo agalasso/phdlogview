@@ -1,4 +1,4 @@
-#include "logviewapp.h"
+#include "LogViewApp.h"
 #include "LogViewFrame.h"
 
 #include <wx/cmdline.h>

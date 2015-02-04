@@ -9,10 +9,40 @@ project (phdlogview)
 set(srcdir ${CMAKE_SOURCE_DIR})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+#include_directories(${srcdir})
+
 add_definitions(-D_USE_MATH_DEFINES)
 
 if (WIN32)
   set(FIND_LIBRARY_USE_LIB64_PATHS FALSE)
+endif()
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to 'Release' as none was specified.")
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
+"MinSizeRel" "RelWithDebInfo")
+endif()
+
+include(CheckCXXCompilerFlag)
+
+#################################################################################
+#
+# general defines
+if(WIN32)
+  set(FIND_LIBRARY_USE_LIB64_PATHS FALSE)
+  #set(CMAKE_LIBRARY_ARCHITECTURE x86)
+else()
+  # c++11 options
+  check_cxx_compiler_flag(-std=c++11 HAS_CXX11_FLAG)
+  check_cxx_compiler_flag(-std=c++0x HAS_CXX0X_FLAG)
+
+  if(HAS_CXX11_FLAG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  elseif(HAS_CXX0X_FLAG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+  endif()
 endif()
 
 if(WIN32)
@@ -31,6 +61,27 @@ if(WIN32)
   find_package(wxWidgets REQUIRED COMPONENTS propgrid base core aui adv html net)
   include(${wxWidgets_USE_FILE})
   message(${wxWidgets_USE_FILE})
+else()
+  if(wxWidgets_PREFIX_DIRECTORY)
+    set(wxWidgets_CONFIG_OPTIONS --prefix=${wxWidgets_PREFIX_DIRECTORY})
+
+    find_program(wxWidgets_CONFIG_EXECUTABLE NAMES "wx-config" PATHS
+${wxWidgets_PREFIX_DIRECTORY}/bin NO_DEFAULT_PATH)
+    if(NOT wxWidgets_CONFIG_EXECUTABLE)
+      message(FATAL_ERROR "Cannot find wxWidgets_CONFIG_EXECUTABLE from the
+given directory ${wxWidgets_PREFIX_DIRECTORY}")
+    endif()
+  endif()
+
+  find_package(wxWidgets REQUIRED COMPONENTS aui core base adv html net)
+  if(NOT wxWidgets_FOUND)
+    message(FATAL_ERROR "WxWidget cannot be found. Please use wx-config
+prefix")
+  endif()
+  #if(APPLE)
+  #  set(PHD_LINK_EXTERNAL ${PHD_LINK_EXTERNAL} wx_osx_cocoau_aui-3.0)
+  #endif()
+  #message("wxLibraries ${wxWidgets_LIBRARIES}")
 endif()
 
 set(APP_LINK_EXTERNAL ${APP_LINK_EXTERNAL} ${wxWidgets_LIBRARIES})
@@ -52,9 +103,15 @@ set (FBSRC
   ${CMAKE_CURRENT_BINARY_DIR}/LogViewFrameBase.h
 )
 
+if (WIN32)
+  set (WXFB "C:\\Program Files (x86)\\wxFormBuilder\\wxFormBuilder.exe")
+else()
+  set (WXFB wxFormBuilder)
+endif()
+
 ADD_CUSTOM_COMMAND(
   OUTPUT ${FBSRC}
-  COMMAND "C:\\Program Files (x86)\\wxFormBuilder\\wxFormBuilder.exe" /g ${srcdir}/phdlogview.fbp
+  COMMAND ${WXFB} /g ${srcdir}/phdlogview.fbp
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/phdlogview.fbp
 )
 
