@@ -414,6 +414,39 @@ static bool ParseCalibration(const std::string& ln, CalibrationEntry& e)
     return true;
 }
 
+void GuideSession::CalcStats()
+{
+    double sum_ra = 0.0;
+    double sum_ra2 = 0.0;
+    double sum_dec = 0.0;
+    double sum_dec2 = 0.0;
+    double peak_r = 0.0;
+    double peak_d = 0.0;
+    int cnt = 0;
+
+    for (auto it = entries.begin(); it != entries.end(); ++it)
+    {
+        const GuideEntry& e = *it;
+        if (e.included)
+        {
+            ++cnt;
+            sum_ra += e.raraw;
+            sum_ra2 += e.raraw * e.raraw;
+            if (fabs(e.raraw) > fabs(peak_r))
+                peak_r = e.raraw;
+            sum_dec += e.decraw;
+            sum_dec2 += e.decraw * e.decraw;
+            if (fabs(e.decraw) > fabs(peak_d))
+                peak_d = e.decraw;
+        }
+    }
+
+    rms_ra = rms(cnt, sum_ra, sum_ra2);
+    rms_dec = rms(cnt, sum_dec, sum_dec2);
+    peak_ra = peak_r;
+    peak_dec = peak_d;
+}
+
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
     log.sessions.clear();
@@ -428,14 +461,6 @@ bool LogParser::Parse(std::istream& is, GuideLog& log)
     GuideSession *s = 0;
     Calibration *cal = 0;
     unsigned int nr = 0;
-
-    double sum_ra;
-    double sum_ra2;
-    double sum_dec;
-    double sum_dec2;
-    double peak_ra;
-    double peak_dec;
-    int cnt;
 
     std::string ln;
     while (std::getline(is, ln))
@@ -457,8 +482,6 @@ redo:
                 s = &log.sessions[log.sessions.size() - 1];
                 s->starts.ParseISOCombined(datestr, ' ');
                 settling = false;
-                sum_ra = sum_ra2 = sum_dec = sum_dec2 = peak_ra = peak_dec = 0.0;
-                cnt = 0;
                 goto redo;
             }
 
@@ -516,13 +539,10 @@ redo:
         {
             if (ln.size() == 0 || StartsWith(ln, GUIDING_ENDS))
             {
-                s->rms_ra = rms(cnt, sum_ra, sum_ra2);
-                s->rms_dec = rms(cnt, sum_dec, sum_dec2);
-                s->peak_ra = peak_ra;
-                s->peak_dec = peak_dec;
                 const auto& p = s->entries.rbegin();
                 if (p != s->entries.rend())
                     s->duration = p->dt;
+                s->CalcStats();
                 s = 0;
 
                 st = SKIP;
@@ -535,32 +555,23 @@ redo:
                 if (!ParseEntry(ln, e))
                     continue;
 
-                s->entries.push_back(e);
-
                 if (e.err && e.mass == 0)
                 {
+                    e.included = false;
+
                     // older logs did not give the error info
                     if (e.info.empty())
                         e.info = "Frame dropped";
 
                     // fake an info event
                     ln = "INFO: " + e.info;
+
+                    s->entries.push_back(e);
                 }
                 else
                 {
-                    if (!settling)
-                    {
-                        ++cnt;
-                        sum_ra += e.raraw;
-                        sum_ra2 += e.raraw * e.raraw;
-                        if (fabs(e.raraw) > fabs(peak_ra))
-                            peak_ra = e.raraw;
-                        sum_dec += e.decraw;
-                        sum_dec2 += e.decraw * e.decraw;
-                        if (fabs(e.decraw) > fabs(peak_dec))
-                            peak_dec = e.decraw;
-                    }
-
+                    e.included = !settling;
+                    s->entries.push_back(e);
                     continue;
                 }
             }
@@ -616,13 +627,10 @@ redo:
 
     if (s)
     {
-        s->rms_ra = rms(cnt, sum_ra, sum_ra2);
-        s->rms_dec = rms(cnt, sum_dec, sum_dec2);
-        s->peak_ra = peak_ra;
-        s->peak_dec = peak_dec;
         const auto& p = s->entries.rbegin();
         if (p != s->entries.rend())
             s->duration = p->dt;
+        s->CalcStats();
     }
 
     return true;

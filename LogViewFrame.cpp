@@ -11,6 +11,7 @@
 #include <wx/dnd.h>
 #include <wx/wupdlock.h>
 #include <wx/aboutdlg.h>
+#include <wx/graphics.h>
 
 #include <algorithm>
 #include <fstream>
@@ -24,11 +25,24 @@ static GuideLog s_log;
 #define DECEL 0.19
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.2"
+#define APP_VERSION_STR "0.3"
+
+enum DragMode
+{
+    DRAG_PAN,
+    DRAG_EXCLUDE,
+};
 
 struct DragInfo
 {
     bool m_dragging;
+    DragMode m_dragMode;
+
+    // for DRAG_EXCLUDE
+    wxPoint m_anchorPoint;
+    wxPoint m_endPoint;
+    bool dragMoved;
+
     int drag_direction; // 0 = unknown, 1 = horizontal, 2 = vertical
     wxPoint m_lastMousePos;
     wxPoint m_mousePos[2];
@@ -205,7 +219,7 @@ void LogViewFrame::OnHelpAbout(wxCommandEvent& event)
 
     aboutInfo.SetName(APP_NAME);
     aboutInfo.SetVersion(APP_VERSION_STR);
-    aboutInfo.SetDescription(_("A tool for visualizing the data in your PHD2 log file"));
+    aboutInfo.SetDescription(_("A tool for visualizing PHD2 guide log data"));
     aboutInfo.SetCopyright("(C) 2015 Andy Galasso <andy.galasso@gmail.com>");
     aboutInfo.SetWebSite("http://adgsoftware.com/phd2utils");
     aboutInfo.AddDeveloper("Andy Galasso");
@@ -325,7 +339,19 @@ void LogViewFrame::InitCalDisplay()
     disp.valid = true;
 }
 
-void LogViewFrame::OnCellSelected( wxGridEvent& event )
+static void InitStats(wxGrid *stats, const GuideSession *session)
+{
+    stats->BeginBatch();
+    stats->SetCellValue(0, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_ra, session->rms_ra));
+    stats->SetCellValue(1, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_dec, session->rms_dec));
+    double tot = sqrt(session->rms_ra * session->rms_ra + session->rms_dec * session->rms_dec);
+    stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * tot, tot));
+    stats->SetCellValue(0, 1, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
+    stats->SetCellValue(1, 1, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
+    stats->EndBatch();
+}
+
+void LogViewFrame::OnCellSelected(wxGridEvent& event)
 {
     int row = event.GetRow();
     m_sessions->SelectRow(row);
@@ -360,15 +386,7 @@ void LogViewFrame::OnCellSelected( wxGridEvent& event )
 
         if (m_session)
         {
-            m_stats->BeginBatch();
-            m_stats->SetCellValue(0, 0, wxString::Format("% .2f\" (%.2f px)", m_session->pixelScale * m_session->rms_ra, m_session->rms_ra));
-            m_stats->SetCellValue(1, 0, wxString::Format("% .2f\" (%.2f px)", m_session->pixelScale * m_session->rms_dec, m_session->rms_dec));
-            double tot = sqrt(m_session->rms_ra * m_session->rms_ra + m_session->rms_dec * m_session->rms_dec);
-            m_stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", m_session->pixelScale * tot, tot));
-            m_stats->SetCellValue(0, 1, wxString::Format("% .2f\" (%.2f px)", m_session->pixelScale * m_session->peak_ra, m_session->peak_ra));
-            m_stats->SetCellValue(1, 1, wxString::Format("% .2f\" (%.2f px)", m_session->pixelScale * m_session->peak_dec, m_session->peak_dec));
-            m_stats->EndBatch();
-
+            InitStats(m_stats, m_session);
             if (!m_session->m_ginfo.IsValid())
                 InitGraph();
             UpdateScrollbar();
@@ -399,6 +417,11 @@ inline static wxLongLong_t now()
     return ::wxGetUTCTimeMillis().GetValue();
 }
 
+inline static int IdxFromScreen(const GraphInfo& ginfo, wxCoord x)
+{
+    return (int)(ginfo.i0 + 0.5 + x / ginfo.hscale);
+}
+
 void LogViewFrame::OnLeftDown(wxMouseEvent& event)
 {
     if (!m_session && !m_calibration)
@@ -408,10 +431,22 @@ void LogViewFrame::OnLeftDown(wxMouseEvent& event)
     }
 
     s_drag.m_dragging = true;
-    s_drag.drag_direction = 0;
-    s_drag.m_lastMousePos = event.GetPosition();
-    s_drag.m_mousePos[0] = s_drag.m_mousePos[1] = event.GetPosition();
-    s_drag.m_mouseTime[0] = s_drag.m_mouseTime[1] = now(); /*evt.GetTimestamp();*/
+
+    if (m_session && event.ControlDown())
+    {
+        s_drag.m_dragMode = DRAG_EXCLUDE;
+        s_drag.m_anchorPoint = s_drag.m_endPoint = event.GetPosition();
+        s_drag.dragMoved = false;
+    }
+    else
+    {
+        s_drag.m_dragMode = DRAG_PAN;
+        s_drag.drag_direction = 0;
+        s_drag.m_lastMousePos = event.GetPosition();
+        s_drag.m_mousePos[0] = s_drag.m_mousePos[1] = event.GetPosition();
+        s_drag.m_mouseTime[0] = s_drag.m_mouseTime[1] = now(); /*evt.GetTimestamp();*/
+    }
+
     s_drag.m_rate.x = 0.0;
     s_drag.m_rate.y = 0.0;
     m_timer.Stop();
@@ -431,17 +466,73 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
     s_drag.m_dragging = false;
     m_graph->ReleaseMouse();
 
-    wxLongLong_t now = ::now();
-    long dt = now - s_drag.m_mouseTime[0];
-    if (dt > 0)
+    if (s_drag.m_dragMode == DRAG_PAN)
     {
-        s_drag.m_rate.x = (double)(event.GetPosition().x - s_drag.m_mousePos[0].x) / (double)dt;
-        s_drag.m_rate.y = (double)(event.GetPosition().y - s_drag.m_mousePos[0].y) / (double)dt;
-        if (fabs(s_drag.m_rate.x) > DECEL || fabs(s_drag.m_rate.y) > DECEL)
+        wxLongLong_t now = ::now();
+        long dt = now - s_drag.m_mouseTime[0];
+        if (dt > 0)
         {
-            s_drag.m_mousePos[1] = event.GetPosition();
-            s_drag.m_mouseTime[1] = now;
-            m_timer.Start(20, true);
+            s_drag.m_rate.x = (double)(event.GetPosition().x - s_drag.m_mousePos[0].x) / (double)dt;
+            s_drag.m_rate.y = (double)(event.GetPosition().y - s_drag.m_mousePos[0].y) / (double)dt;
+            if (fabs(s_drag.m_rate.x) > DECEL || fabs(s_drag.m_rate.y) > DECEL)
+            {
+                s_drag.m_mousePos[1] = event.GetPosition();
+                s_drag.m_mouseTime[1] = now;
+                m_timer.Start(20, true);
+            }
+        }
+    }
+    else // DRAG_EXCLUDE
+    {
+        if (m_session)
+        {
+            GraphInfo& ginfo = m_session->m_ginfo;
+
+            if (s_drag.dragMoved)
+            {
+                // excluding a range
+                wxRect rect(s_drag.m_anchorPoint, s_drag.m_endPoint);
+                GuideSession::EntryVec& entries = m_session->entries;
+                int i0 = (int)(ginfo.i0 + 0.5 + rect.GetLeft() / ginfo.hscale);
+                int i1 = (int)(ginfo.i0 + 0.5 + rect.GetRight() / ginfo.hscale);
+                if (i1 >= 0 && i0 < (int)entries.size())
+                {
+                    if (i0 < 0)
+                        i0 = 0;
+                    if (i1 >= (int) m_session->entries.size())
+                        i1 = m_session->entries.size() - 1;
+
+                    for (int j = i0; j <= i1; j++)
+                        entries[j].included = false;
+                    m_graph->Refresh();
+                    m_session->CalcStats();
+                    InitStats(m_stats, m_session);
+                }
+            }
+            else
+            {
+                // delete excluded range
+                int i = IdxFromScreen(ginfo, event.GetPosition().x);
+                GuideSession::EntryVec& entries = m_session->entries;
+                if (i >= 0 && i < (int)entries.size() && !entries[i].included)
+                {
+                    for (int j = i; j >= 0; --j)
+                    {
+                        if (entries[j].included)
+                            break;
+                        entries[j].included = true;
+                    }
+                    for (int j = i + 1; j < (int)entries.size(); j++)
+                    {
+                        if (entries[j].included)
+                            break;
+                        entries[j].included = true;
+                    }
+                    m_graph->Refresh();
+                    m_session->CalcStats();
+                    InitStats(m_stats, m_session);
+                }
+            }
         }
     }
 
@@ -456,8 +547,7 @@ void LogViewFrame::OnMove( wxMouseEvent& event )
 
         if (!s_drag.m_dragging)
         {
-            int x = event.GetPosition().x;
-            int i = (int)(ginfo.i0 + x / ginfo.hscale);
+            int i = IdxFromScreen(ginfo, event.GetPosition().x);
             const GuideSession::EntryVec& entries = m_session->entries;
             if (i >= 0 && i < (int)entries.size())
             {
@@ -471,44 +561,55 @@ void LogViewFrame::OnMove( wxMouseEvent& event )
             return;
         }
 
-        const wxPoint& pos = event.GetPosition();
-        int dx = pos.x - s_drag.m_lastMousePos.x;
-        int dy = pos.y - s_drag.m_lastMousePos.y;
-        s_drag.m_lastMousePos = pos;
-
-        int prior_direction = s_drag.drag_direction;
-        if (dx == 0)
-            s_drag.drag_direction = 2;
-        else
-            s_drag.drag_direction = 1;
-
-        if (prior_direction != s_drag.drag_direction)
+        if (s_drag.m_dragMode == DRAG_PAN)
         {
-            event.Skip();
-            return;
-        }
+            const wxPoint& pos = event.GetPosition();
+            int dx = pos.x - s_drag.m_lastMousePos.x;
+            int dy = pos.y - s_drag.m_lastMousePos.y;
+            s_drag.m_lastMousePos = pos;
 
-        if (s_drag.drag_direction == 1)
-        {
-            ginfo.xofs -= dx;
-            UpdateRange(&ginfo);
+            int prior_direction = s_drag.drag_direction;
+            if (dx == 0)
+                s_drag.drag_direction = 2;
+            else
+                s_drag.drag_direction = 1;
 
-            wxLongLong_t now = ::now();
-            long dt = now /*evt.GetTimestamp()*/ - s_drag.m_mouseTime[1];
-            if (dt >= 20)
+            if (prior_direction != s_drag.drag_direction)
             {
-                s_drag.m_mousePos[0] = s_drag.m_mousePos[1];
-                s_drag.m_mouseTime[0] = s_drag.m_mouseTime[1];
-                s_drag.m_mousePos[1] = pos;
-                s_drag.m_mouseTime[1] = now; //evt.GetTimestamp();
+                event.Skip();
+                return;
             }
 
-            UpdateScrollbar();
-        }
-        else
-            ginfo.vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
+            if (s_drag.drag_direction == 1)
+            {
+                ginfo.xofs -= dx;
+                UpdateRange(&ginfo);
 
-        m_graph->Refresh();
+                wxLongLong_t now = ::now();
+                long dt = now /*evt.GetTimestamp()*/ - s_drag.m_mouseTime[1];
+                if (dt >= 20)
+                {
+                    s_drag.m_mousePos[0] = s_drag.m_mousePos[1];
+                    s_drag.m_mouseTime[0] = s_drag.m_mouseTime[1];
+                    s_drag.m_mousePos[1] = pos;
+                    s_drag.m_mouseTime[1] = now; //evt.GetTimestamp();
+                }
+
+                UpdateScrollbar();
+            }
+            else
+                ginfo.vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
+
+            m_graph->Refresh();
+        }
+        else // DRAG_EXCLUDE
+        {
+            s_drag.m_endPoint = event.GetPosition();
+            wxPoint d = s_drag.m_endPoint - s_drag.m_anchorPoint;
+            if (d.x > 2 || d.x < -2 || d.y > 2 || d.y < -2)
+                s_drag.dragMoved = true;
+            m_graph->Refresh();
+        }
     }
     else if (m_calibration && s_drag.m_dragging)
     {
@@ -878,7 +979,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         xRate[MOUNT] = m_session->mount.xRate / 1000.0; // pixels per millisec
         xRate[AO] = m_session->ao.xRate / 1000.0;
 
-        double xx = x0;
+        double xx = x0 - 0.4 * ginfo.hscale;
         for (unsigned int i = i0; i <= i1; i++)
         {
             int x = (int) xx;
@@ -903,10 +1004,10 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         yRate[MOUNT] = m_session->mount.yRate / 1000.0; // pixels per millisec
         yRate[AO] = m_session->ao.yRate / 1000.0;
 
-        double xx = x0;
+        double xx = x0 - 0.2 * ginfo.hscale;
         for (unsigned int i = i0; i <= i1; i++)
         {
-            int x = (int)(xx + 0.25 * ginfo.hscale);
+            int x = (int)xx;
             const auto& e = entries[i];
             int height = -(int)(e.decdur * yRate[e.mount] * ginfo.vscale);
             if (height > 0)
@@ -989,6 +1090,59 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         dc.DrawLines(ix, s_tmp.pts);
     }
 
+    // excluded sections
+    if (i1 >= i0)
+    {
+        bool included = entries[i0].included;
+        bool prev_included = included;
+        unsigned int e0 = i0;
+
+        wxGraphicsContext *gc = 0;
+        for (unsigned int i = i0 + 1; i <= i1; i++)
+        {
+            bool included = entries[i].included;
+            if (included && !prev_included)
+            {
+                // end of an excluded range, draw it
+                if (!gc)
+                {
+                    gc = wxGraphicsContext::Create(dc);
+                    if (gc)
+                        gc->SetBrush(wxColour(192, 192, 192, 64));
+                }
+                if (gc)
+                {
+                    int x0 = (int)((double)(e0 - 0.25) * ginfo.hscale) - ginfo.xofs;
+                    int x1 = (int)((double)(i - 1.0 + 0.25) * ginfo.hscale) - ginfo.xofs;
+                    gc->DrawRectangle(x0, 0, x1 - x0 + 1, m_graph->GetSize().GetHeight());
+                }
+            }
+            else if (!included && prev_included)
+            {
+                // start of excluded range
+                e0 = i;
+            }
+            prev_included = included;
+        }
+        if (!prev_included)
+        {
+            if (!gc)
+            {
+                gc = wxGraphicsContext::Create(dc);
+                if (gc)
+                    gc->SetBrush(wxColour(192, 192, 192, 64));
+            }
+            if (gc)
+            {
+                int x0 = (int)((double)(e0 - 0.25) * ginfo.hscale) - ginfo.xofs;
+                int x1 = (int)((double)(i1 + 0.25) * ginfo.hscale) - ginfo.xofs;
+                gc->DrawRectangle(x0, 0, x1 - x0 + 1, m_graph->GetSize().GetHeight());
+            }
+        }
+
+        delete gc;
+    }
+
     // events
     if (m_events->IsChecked())
     {
@@ -1017,6 +1171,19 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
                 prev_end = xpos + width;
             wxString s = info.repeats > 1 ? wxString::Format("%d x %s", info.repeats, info.info) : info.info;
             dc.DrawText(s, xpos, m_graph->GetSize().GetHeight() - 16 * row);
+        }
+    }
+
+    if (s_drag.m_dragging && s_drag.m_dragMode == DRAG_EXCLUDE && s_drag.m_anchorPoint.x != s_drag.m_endPoint.x)
+    {
+        wxRect rect(s_drag.m_anchorPoint, s_drag.m_endPoint);
+
+        wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+        if (gc)
+        {
+            gc->SetBrush(wxColour(192, 192, 192, 64));
+            gc->DrawRectangle(rect.x, 0, rect.width, m_graph->GetSize().GetHeight());
+            delete gc;
         }
     }
 }

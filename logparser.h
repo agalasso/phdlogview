@@ -18,6 +18,7 @@ struct GuideEntry
     int frame;
     float dt;
     WhichMount mount;
+    bool included;
     float dx;
     float dy;
     float raraw;
@@ -121,6 +122,7 @@ struct GuideSession : public LogSection
     GraphInfo m_ginfo;
 
     GuideSession(const wxString& dt) : LogSection(dt), duration(0.0), pixelScale(1.0), rms_ra(0.0), rms_dec(0.0) { }
+    void CalcStats();
 };
 
 struct CalDisplay
