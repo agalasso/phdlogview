@@ -346,8 +346,8 @@ static void InitStats(wxGrid *stats, const GuideSession *session)
     stats->SetCellValue(1, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_dec, session->rms_dec));
     double tot = sqrt(session->rms_ra * session->rms_ra + session->rms_dec * session->rms_dec);
     stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * tot, tot));
-    stats->SetCellValue(0, 1, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
-    stats->SetCellValue(1, 1, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
+    stats->SetCellValue(0, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
+    stats->SetCellValue(1, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
     stats->EndBatch();
 }
 
@@ -1156,7 +1156,8 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             const auto& info = *it;
             if (info.idx > i1)
                 break;
-            int width = dc.GetTextExtent(info.info).x;
+            wxString s = info.repeats > 1 ? wxString::Format("%d x %s", info.repeats, info.info) : info.info;
+            int width = dc.GetTextExtent(s).x;
             int xpos = info.idx * ginfo.hscale - ginfo.xofs;
             if (info.idx <= (int)i0)
             {
@@ -1169,7 +1170,6 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
                 row = 1;
             if (xpos + width > prev_end)
                 prev_end = xpos + width;
-            wxString s = info.repeats > 1 ? wxString::Format("%d x %s", info.repeats, info.info) : info.info;
             dc.DrawText(s, xpos, m_graph->GetSize().GetHeight() - 16 * row);
         }
     }

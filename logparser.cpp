@@ -565,15 +565,15 @@ redo:
 
                     // fake an info event
                     ln = "INFO: " + e.info;
-
-                    s->entries.push_back(e);
+                    ParseInfo(ln, s, &settling);
                 }
                 else
                 {
                     e.included = !settling;
-                    s->entries.push_back(e);
-                    continue;
                 }
+
+                s->entries.push_back(e);
+                continue;
             }
 
             if (StartsWith(ln, INFO_KEY))
