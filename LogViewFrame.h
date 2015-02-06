@@ -22,6 +22,7 @@ public:
 private:
     void OnFileExit(wxCommandEvent& event);
     void OnFileOpen(wxCommandEvent& event);
+    void OnHelp(wxCommandEvent& event);
     void OnHelpAbout(wxCommandEvent& event);
     // Handlers for LogViewFrameBase events.
     void OnCellSelected(wxGridEvent& event);

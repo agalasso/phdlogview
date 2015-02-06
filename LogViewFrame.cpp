@@ -25,7 +25,7 @@ static GuideLog s_log;
 #define DECEL 0.19
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.3"
+#define APP_VERSION_STR "0.3.1"
 
 enum DragMode
 {
@@ -78,8 +78,9 @@ enum { ID_TIMER = 10001, };
 
 wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
   EVT_MENU(wxID_OPEN, LogViewFrame::OnFileOpen)
-  EVT_MENU(wxID_ABOUT, LogViewFrame::OnHelpAbout)
   EVT_MENU(wxID_EXIT, LogViewFrame::OnFileExit)
+  EVT_MENU(wxID_HELP, LogViewFrame::OnHelp)
+  EVT_MENU(wxID_ABOUT, LogViewFrame::OnHelpAbout)
   EVT_MOUSEWHEEL(LogViewFrame::OnMouseWheel)
   EVT_TIMER(ID_TIMER, LogViewFrame::OnTimer)
 wxEND_EVENT_TABLE()
@@ -225,6 +226,53 @@ void LogViewFrame::OnHelpAbout(wxCommandEvent& event)
     aboutInfo.AddDeveloper("Andy Galasso");
 
     wxAboutBox(aboutInfo);
+}
+
+class HelpDialog : public HelpDialogBase
+{
+public:
+    HelpDialog(wxWindow *parent);
+    ~HelpDialog();
+};
+
+static HelpDialog *s_help;
+
+HelpDialog::HelpDialog(wxWindow *parent) : HelpDialogBase(parent)
+{
+    static const wxString BR = "<br>";
+    wxString s;
+    s << "<html>"
+        << "<h3>Opening a guide log</h3>"
+        << "There are three ways to open a PHD2 Log File:" << BR
+        << "1. Menu: File => Open" << BR
+        << "2. Drag and drop from Windows explorer" << BR
+        << "3. As an argument on the command-line" << BR
+        << "<h3>Viewing calibration</h3>"
+        << "Drag with the mouse to pan" << BR
+        << "Use the mouse wheel or the lower +/- buttons to zoom in and out" << BR
+        << "<h3>Viewing guiding data</h3>"
+        << "Drag left or right with the mouse to pan, or use the horizontal scrollbar" << BR
+        << "The mouse wheel or the lower +/- buttons will zoom the horizontal scale" << BR
+        << "Drag up or down with the mouse or use the +/- buttons on the right to change the vertical scale" << BR
+        << "<h3>Statistics</h3>"
+        << "To exclude a range of points from the statistics, hold down CTRL and drag the mouse," << BR
+        << "CTRL-Click on an excluded range to un-exclude the range of points." << BR
+        << "</html>";
+
+    m_html->SetPage(s);
+    s_help = this;
+}
+
+HelpDialog::~HelpDialog()
+{
+    s_help = 0;
+}
+
+void LogViewFrame::OnHelp(wxCommandEvent& event)
+{
+    if (!s_help)
+        s_help = new HelpDialog(this);
+    s_help->Show();
 }
 
 inline static void UpdateRange(GraphInfo *ginfo)
