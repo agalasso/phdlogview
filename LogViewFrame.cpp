@@ -284,23 +284,7 @@ inline static void UpdateRange(GraphInfo *ginfo)
 
 void LogViewFrame::InitGraph()
 {
-    // horizontal scale, pixels per entry
-    unsigned int width = m_graph->GetSize().GetWidth();
-    unsigned int entries = m_session->entries.size();
-
-    if (entries == 0)
-        entries = 1;
-    if (entries > width)
-        entries = width;
-    double scale = (double)width / (double)entries;
-    if (scale > MAX_HSCALE_GUIDE)
-        scale = MAX_HSCALE_GUIDE;
-
     GraphInfo& ginfo = m_session->m_ginfo;
-    ginfo.xofs = 0;
-    ginfo.hscale = scale;
-    ginfo.width = width;
-    UpdateRange(&ginfo);
 
     // find max ra or dec
     double mxr = 0.0;
@@ -331,23 +315,14 @@ void LogViewFrame::InitGraph()
         if (e.snr > mxsnr)
             mxsnr = e.snr;
     }
-    if (mxr > 0.0)
-        ginfo.vscale = (double)(m_graph->GetSize().GetHeight() / 2 - 10) / mxr;
-    else
-        ginfo.vscale = 1.0;
 
-    if (mxmass > 0)
-        ginfo.massscale = (double)(m_graph->GetSize().GetHeight() / 2 - 10) / (double)mxmass;
-    else
-        ginfo.massscale = 1.0;
+    ginfo.max_ofs = mxr;
+    ginfo.max_mass = mxmass;
+    ginfo.max_snr = mxsnr;
 
-    if (mxsnr > 0.0)
-        ginfo.snrscale = (double)(m_graph->GetSize().GetHeight() / 2 - 10) / mxsnr;
-    else
-        ginfo.snrscale = 1.0;
-
-    ginfo.hscale0 = ginfo.hscale;
-    ginfo.vscale0 = ginfo.vscale;
+    wxCommandEvent dummy;
+    OnHReset(dummy);
+    OnVReset(dummy);
 }
 
 void LogViewFrame::InitCalDisplay()
@@ -1070,12 +1045,18 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
     if (m_mass->IsChecked())
     {
+        double massscale;
+        if (ginfo.max_mass > 0)
+            massscale = (double)(m_graph->GetSize().GetHeight() / 2 - 10) / (double)ginfo.max_mass;
+        else
+            massscale = 1.0;
+
         unsigned int ix = 0;
         double x = x0;
         for (unsigned int i = i0; i <= i1; i++)
         {
             s_tmp.pts[ix].x = (int)x;
-            s_tmp.pts[ix].y = y0 - (int)(entries[i].mass * ginfo.massscale);
+            s_tmp.pts[ix].y = y0 - (int)(entries[i].mass * massscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1086,12 +1067,18 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
     if (m_snr->IsChecked())
     {
+        double snrscale;
+        if (ginfo.max_snr > 0.0)
+            snrscale = (double)(m_graph->GetSize().GetHeight() / 2 - 10) / ginfo.max_snr;
+        else
+            snrscale = 1.0;
+
         unsigned int ix = 0;
         double x = x0;
         for (unsigned int i = i0; i <= i1; i++)
         {
             s_tmp.pts[ix].x = (int)x;
-            s_tmp.pts[ix].y = y0 - (int)(entries[i].snr * ginfo.snrscale);
+            s_tmp.pts[ix].y = y0 - (int)(entries[i].snr * snrscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1259,7 +1246,14 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
 {
     if (m_session)
     {
-        m_session->m_ginfo.vscale = m_session->m_ginfo.vscale0;
+        int height = m_graph->GetSize().GetHeight();
+        auto& ginfo = m_session->m_ginfo;
+
+        if (ginfo.max_ofs > 0.0)
+            ginfo.vscale = (double)(height / 2 - 10) / ginfo.max_ofs;
+        else
+            ginfo.vscale = 1.0;
+
         m_graph->Refresh();
     }
 }
@@ -1327,9 +1321,23 @@ void LogViewFrame::OnHReset( wxCommandEvent& event )
 {
     if (m_session)
     {
-        m_session->m_ginfo.hscale = m_session->m_ginfo.hscale0;
-        m_session->m_ginfo.xofs = 0;
-        UpdateRange(&m_session->m_ginfo);
+        // horizontal scale, pixels per entry
+        unsigned int width = m_graph->GetSize().GetWidth();
+        unsigned int entries = m_session->entries.size();
+
+        if (entries == 0)
+            entries = 1;
+        if (entries > width)
+            entries = width;
+        double scale = (double)width / (double)entries;
+        if (scale > MAX_HSCALE_GUIDE)
+            scale = MAX_HSCALE_GUIDE;
+
+        auto& ginfo = m_session->m_ginfo;
+        ginfo.hscale = scale;
+        ginfo.width = width;
+        ginfo.xofs = 0;
+        UpdateRange(&ginfo);
         m_graph->Refresh();
         UpdateScrollbar();
     }

@@ -81,10 +81,9 @@ struct GraphInfo
 {
     double hscale;        // pixels per entry
     double vscale;
-    double hscale0;
-    double vscale0;
-    double snrscale;
-    double massscale;
+    double max_ofs;
+    double max_snr;
+    int max_mass;
     int xofs;             // view offset relative to 0th entry
     int width;
     double i0;
