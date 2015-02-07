@@ -25,7 +25,7 @@ static GuideLog s_log;
 #define DECEL 0.19
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.3.2test1"
+#define APP_VERSION_STR "0.3.2"
 
 enum DragMode
 {
