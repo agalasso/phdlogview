@@ -130,6 +130,7 @@ struct CalDisplay
     int xofs;
     int yofs;
     double scale;
+    double min_scale;
     int firstWest, lastWest, firstNorth, lastNorth;
     CalDisplay() : valid(false) { }
 };

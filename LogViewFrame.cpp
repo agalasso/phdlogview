@@ -25,7 +25,7 @@ static GuideLog s_log;
 #define DECEL 0.19
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.3.1"
+#define APP_VERSION_STR "0.3.2test1"
 
 enum DragMode
 {
@@ -358,7 +358,9 @@ void LogViewFrame::InitCalDisplay()
     if (maxv == 0.0)
         maxv = 1.0;
     int size = wxMin(m_graph->GetSize().GetWidth(), m_graph->GetSize().GetHeight());
+    size = std::max(size, 40); // prevent -ive scale
     disp.scale = (double)(size - 30) / (2.0 * maxv);
+    disp.min_scale = std::min(disp.scale, MIN_HSCALE_CAL);
 
     disp.valid = true;
 }
@@ -931,19 +933,22 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             v = m;
         int iv = (int)(v * vscale);
 
-        dc.SetPen(wxPen(wxColour(100, 100, 100), 1, wxDOT));
-        double dy = v;
-        wxString format = arcsecs ? "%g\"" : "%g";
-        for (int y = y0 - iv; y > 0; y -= iv, dy += v)
+        if (iv > 0)
         {
-            dc.DrawLine(0, y, fullw, y);
-            dc.DrawText(wxString::Format(format, dy), 3, y + 2);
-        }
-        dy = -v;
-        for (int y = y0 + iv; y < 2 * y0; y += iv, dy -= v)
-        {
-            dc.DrawLine(0, y, fullw, y);
-            dc.DrawText(wxString::Format(format, dy), 3, y + 2);
+            dc.SetPen(wxPen(wxColour(100, 100, 100), 1, wxDOT));
+            double dy = v;
+            wxString format = arcsecs ? "%g\"" : "%g";
+            for (int y = y0 - iv; y > 0; y -= iv, dy += v)
+            {
+                dc.DrawLine(0, y, fullw, y);
+                dc.DrawText(wxString::Format(format, dy), 3, y + 2);
+            }
+            dy = -v;
+            for (int y = y0 + iv; y < 2 * y0; y += iv, dy -= v)
+            {
+                dc.DrawLine(0, y, fullw, y);
+                dc.DrawText(wxString::Format(format, dy), 3, y + 2);
+            }
         }
     }
 
@@ -1291,9 +1296,10 @@ void LogViewFrame::OnHMinus( wxCommandEvent& event )
     }
     else if (m_calibration)
     {
-        if (m_calibration->display.scale <= MIN_HSCALE_CAL)
+        auto& display = m_calibration->display;
+        if (display.scale <= display.min_scale)
             return;
-        m_calibration->display.scale *= 1.0 / 1.1;
+        display.scale *= 1.0 / 1.1;
         m_graph->Refresh();
     }
 }
