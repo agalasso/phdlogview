@@ -20,14 +20,17 @@ public:
     void OpenLog(const wxString& filename);
 
 private:
-    void OnFileExit(wxCommandEvent& event);
     void OnFileOpen(wxCommandEvent& event);
+    void OnFileSettings(wxCommandEvent& event);
+    void OnFileExit(wxCommandEvent& event);
     void OnHelp(wxCommandEvent& event);
     void OnHelpAbout(wxCommandEvent& event);
+    void OnMenuInclude(wxCommandEvent& event);
     // Handlers for LogViewFrameBase events.
     void OnCellSelected(wxGridEvent& event);
     void OnLeftDown(wxMouseEvent& event);
     void OnLeftUp(wxMouseEvent& event);
+    void OnRightUp(wxMouseEvent& event);
     void OnMove(wxMouseEvent& event);
     void OnMouseWheel(wxMouseEvent& event);
     void OnScroll(wxScrollEvent& event);

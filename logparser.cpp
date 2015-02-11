@@ -301,7 +301,7 @@ inline static bool StartsWith(const std::string& s, const std::string& pfx)
     return s.compare(0, pfx.length(), pfx) == 0;
 }
 
-static void ParseInfo(const std::string& ln, GuideSession *s, bool *settling)
+static void ParseInfo(const std::string& ln, GuideSession *s)
 {
     InfoEntry e;
     e.idx = s->entries.size();
@@ -310,14 +310,7 @@ static void ParseInfo(const std::string& ln, GuideSession *s, bool *settling)
 
     // trim some useless prefixes
     if (e.info.StartsWith("SETTLING STATE CHANGE, "))
-    {
         e.info = e.info.substr(23);
-
-        if (e.info.find("Settling start") != wxString::npos)
-            *settling = true;
-        else if (e.info.find("Settling complete") != wxString::npos || e.info.find("Settling fail") != wxString::npos)
-            *settling = false;
-    }
     else if (e.info.StartsWith("Guiding parameter change, "))
         e.info = e.info.substr(26);
 
@@ -457,7 +450,6 @@ bool LogParser::Parse(std::istream& is, GuideLog& log)
     State st = SKIP;
     enum HdrState { GLOBAL, AO, MOUNT, };
     HdrState hdrst;
-    bool settling = false;
     GuideSession *s = 0;
     Calibration *cal = 0;
     unsigned int nr = 0;
@@ -481,7 +473,6 @@ redo:
                 log.sections.push_back(LogSectionLoc(GUIDING_SECTION, log.sessions.size() - 1));
                 s = &log.sessions[log.sessions.size() - 1];
                 s->starts.ParseISOCombined(datestr, ' ');
-                settling = false;
                 goto redo;
             }
 
@@ -542,7 +533,6 @@ redo:
                 const auto& p = s->entries.rbegin();
                 if (p != s->entries.rend())
                     s->duration = p->dt;
-                s->CalcStats();
                 s = 0;
 
                 st = SKIP;
@@ -565,11 +555,11 @@ redo:
 
                     // fake an info event
                     ln = "INFO: " + e.info;
-                    ParseInfo(ln, s, &settling);
+                    ParseInfo(ln, s);
                 }
                 else
                 {
-                    e.included = !settling;
+                    e.included = true;
                 }
 
                 s->entries.push_back(e);
@@ -578,7 +568,7 @@ redo:
 
             if (StartsWith(ln, INFO_KEY))
             {
-                ParseInfo(ln, s, &settling);
+                ParseInfo(ln, s);
             }
         }
         else if (st == CAL_HDR)
@@ -630,7 +620,6 @@ redo:
         const auto& p = s->entries.rbegin();
         if (p != s->entries.rend())
             s->duration = p->dt;
-        s->CalcStats();
     }
 
     return true;

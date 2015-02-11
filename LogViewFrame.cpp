@@ -12,6 +12,7 @@
 #include <wx/wupdlock.h>
 #include <wx/aboutdlg.h>
 #include <wx/graphics.h>
+#include <wx/valnum.h>
 
 #include <algorithm>
 #include <fstream>
@@ -22,15 +23,31 @@ static GuideLog s_log;
 #define MIN_HSCALE_GUIDE 0.1
 #define MAX_HSCALE_CAL 400.0
 #define MIN_HSCALE_CAL 5.0
-#define DECEL 0.19
+#define DECEL 0.03
+#define MIN_SHOW 25
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.3.2"
+#define APP_VERSION_STR "0.4.0"
+
+struct SettleParams
+{
+    double pixels;
+    double seconds;
+};
+
+struct Settings
+{
+    bool excludeByServer;
+    bool excludeParametric;
+    SettleParams settle;
+};
+static Settings s_settings;
 
 enum DragMode
 {
     DRAG_PAN,
     DRAG_EXCLUDE,
+    DRAG_INCLUDE,
 };
 
 struct DragInfo
@@ -38,7 +55,7 @@ struct DragInfo
     bool m_dragging;
     DragMode m_dragMode;
 
-    // for DRAG_EXCLUDE
+    // for DRAG_EXCLUDE / DRAG_INCLUDE
     wxPoint m_anchorPoint;
     wxPoint m_endPoint;
     bool dragMoved;
@@ -47,6 +64,7 @@ struct DragInfo
     wxPoint m_lastMousePos;
     wxPoint m_mousePos[2];
     wxLongLong_t m_mouseTime[2];
+    double decel;
     wxRealPoint m_rate; // pixels per millisecond
 };
 static DragInfo s_drag;
@@ -74,13 +92,21 @@ struct FileDropTarget : public wxFileDropTarget
     }
 };
 
-enum { ID_TIMER = 10001, };
+enum
+{
+    ID_TIMER = 10001,
+    ID_INCLUDE_ALL,
+    ID_INCLUDE_NONE,
+    ID_EXCLUDE_SETTLE,
+};
 
 wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
   EVT_MENU(wxID_OPEN, LogViewFrame::OnFileOpen)
+  EVT_MENU(wxID_SETTINGS, LogViewFrame::OnFileSettings)
   EVT_MENU(wxID_EXIT, LogViewFrame::OnFileExit)
   EVT_MENU(wxID_HELP, LogViewFrame::OnHelp)
   EVT_MENU(wxID_ABOUT, LogViewFrame::OnHelpAbout)
+  EVT_MENU_RANGE(ID_INCLUDE_ALL, ID_EXCLUDE_SETTLE, LogViewFrame::OnMenuInclude)
   EVT_MOUSEWHEEL(LogViewFrame::OnMouseWheel)
   EVT_TIMER(ID_TIMER, LogViewFrame::OnTimer)
 wxEND_EVENT_TABLE()
@@ -117,6 +143,11 @@ LogViewFrame::LogViewFrame()
             SetPosition(wxPoint(x, y));
         }
     }
+
+    s_settings.excludeByServer = Config->ReadBool("/settle/excludeByServer", true);
+    s_settings.excludeParametric = Config->ReadBool("/settle/excludeParametric", false);
+    s_settings.settle.pixels = Config->ReadDouble("/settle/pixels", 1.0);
+    s_settings.settle.seconds = Config->ReadDouble("/settle/seconds", 10.0);
 }
 
 static wxString durStr(double dur)
@@ -136,6 +167,114 @@ static wxString durStr(double dur)
     }
     s += wxString::Format("%.fs", dur);
     return s;
+}
+
+inline static void IncludeRange(GuideSession::EntryVec& entries, bool include, unsigned int i = 0, unsigned int i1 = (unsigned int)-1)
+{
+    for (auto it = entries.begin() + i; i < i1 && it != entries.end(); ++it, ++i)
+        it->included = include;
+}
+
+inline static void IncludeAll(GuideSession::EntryVec& entries)
+{
+    IncludeRange(entries, true);
+}
+
+inline static void IncludeNone(GuideSession::EntryVec& entries)
+{
+    IncludeRange(entries, false);
+}
+
+static void ExcludeSettlingByAPI(GuideSession *session)
+{
+    bool settling = false;
+    int start_idx = 0;
+    auto& infos = session->infos;
+    auto& entries = session->entries;
+
+    for (auto it = infos.begin(); it != infos.end(); ++it)
+    {
+        if (settling)
+        {
+            if (it->info.find("Settling complete") != wxString::npos || it->info.find("Settling fail") != wxString::npos)
+            {
+                settling = false;
+                IncludeRange(entries, false, start_idx, it->idx);
+            }
+        }
+        else
+        {
+            if (it->info.find("Settling start") != wxString::npos)
+            {
+                settling = true;
+                start_idx = it->idx;
+            }
+        }
+    }
+    if (settling)
+        IncludeRange(entries, false, start_idx);
+}
+
+static void ExcludeSettlingByDistance(GuideSession *session, const SettleParams& params)
+{
+    auto& infos = session->infos;
+    auto& entries = session->entries;
+    double lim2 = params.pixels * params.pixels;
+
+    for (auto it = infos.begin(); it != infos.end(); ++it)
+    {
+        if (it->info.find("DITHER") != wxString::npos)
+        {
+            if (it->idx >= (int)entries.size())
+                break;
+            int start_idx = it->idx;
+            auto eit = entries.begin() + it->idx;
+            double start_time = eit->dt;
+            bool close = false;
+            bool settled = false;
+            int end_idx = start_idx;
+
+            for (; eit != entries.end(); ++eit, ++end_idx)
+            {
+                double dx = eit->dx;
+                double dy = eit->dy;
+                double d2 = dx * dx + dy * dy;
+                double t = eit->dt;
+                if (d2 < lim2)
+                {
+                    if (!close)
+                    {
+                        close = true;
+                        start_time = t;
+                    }
+                    else
+                    {
+                        double elapsed = t - start_time;
+                        if (elapsed > params.seconds)
+                        {
+                            settled = true;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    close = false;
+                }
+            }
+            if (settled)
+                IncludeRange(entries, false, start_idx, end_idx);
+        }
+    }
+}
+
+static void ExcludeSettling(GuideSession *session)
+{
+    if (s_settings.excludeByServer)
+        ExcludeSettlingByAPI(session);
+
+    if (s_settings.excludeParametric)
+        ExcludeSettlingByDistance(session, s_settings.settle);
 }
 
 void LogViewFrame::OpenLog(const wxString& filename)
@@ -187,8 +326,12 @@ void LogViewFrame::OpenLog(const wxString& filename)
         else
         {
             s = &s_log.sessions[it->idx];
+            GuideSession *session = static_cast<GuideSession*>(s);
+            IncludeAll(session->entries);
+            ExcludeSettling(session);
+            session->CalcStats();
             m_sessions->SetCellValue(row, 2, "Guiding");
-            m_sessions->SetCellValue(row, 3, durStr(static_cast<GuideSession*>(s)->duration));
+            m_sessions->SetCellValue(row, 3, durStr(session->duration));
         }
         m_sessions->SetCellValue(row, 1, s->date);
     }
@@ -213,6 +356,90 @@ void LogViewFrame::OnFileOpen(wxCommandEvent& event)
         return;
 
     OpenLog(openFileDialog.GetPath());
+}
+
+void LogViewFrame::OnFileSettings(wxCommandEvent& event)
+{
+    SettingsDialogBase dlg(this);
+
+    dlg.m_excludeApi->SetValue(s_settings.excludeByServer);
+    dlg.m_excludeByParam->SetValue(s_settings.excludeParametric);
+    double pixels = s_settings.settle.pixels;
+    dlg.m_settlePixels->SetValidator(wxFloatingPointValidator<double>(1, &pixels, 0));
+    double seconds = s_settings.settle.seconds;
+    dlg.m_settleSeconds->SetValidator(wxFloatingPointValidator<double>(1, &seconds, 0));
+
+    if (dlg.ShowModal() == wxID_CANCEL)
+        return;
+
+    s_settings.excludeByServer = dlg.m_excludeApi->GetValue();
+    s_settings.excludeParametric = dlg.m_excludeByParam->GetValue();
+    s_settings.settle.pixels = pixels;
+    s_settings.settle.seconds = seconds;
+
+    Config->Write("/settle/excludeByServer", s_settings.excludeByServer);
+    Config->Write("/settle/excludeParametric", s_settings.excludeParametric);
+    Config->Write("/settle/pixels", s_settings.settle.pixels);
+    Config->Write("/settle/seconds", s_settings.settle.seconds);
+}
+
+void LogViewFrame::OnRightUp(wxMouseEvent& event)
+{
+    if (!m_session)
+    {
+        event.Skip();
+        return;
+    }
+
+    wxMenu *menu = new wxMenu();
+
+    menu->Append(ID_INCLUDE_ALL, _("Include all frames"));
+    menu->Append(ID_INCLUDE_NONE, _("Exclude all frames"));
+    menu->Append(ID_EXCLUDE_SETTLE, _("Exclude frames settling"));
+
+    PopupMenu(menu, m_graph->GetPosition() + event.GetPosition());
+
+    delete menu;
+}
+
+static void InitStats(wxGrid *stats, const GuideSession *session)
+{
+    stats->BeginBatch();
+    stats->SetCellValue(0, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_ra, session->rms_ra));
+    stats->SetCellValue(1, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_dec, session->rms_dec));
+    double tot = sqrt(session->rms_ra * session->rms_ra + session->rms_dec * session->rms_dec);
+    stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * tot, tot));
+    stats->SetCellValue(0, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
+    stats->SetCellValue(1, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
+    stats->EndBatch();
+}
+
+void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
+{
+    if (!m_session)
+        return;
+
+    if (event.GetId() == ID_INCLUDE_ALL)
+    {
+        IncludeAll(m_session->entries);
+        m_session->CalcStats();
+        InitStats(m_stats, m_session);
+        m_graph->Refresh();
+    }
+    else if (event.GetId() == ID_INCLUDE_NONE)
+    {
+        IncludeNone(m_session->entries);
+        m_session->CalcStats();
+        InitStats(m_stats, m_session);
+        m_graph->Refresh();
+    }
+    else if (event.GetId() == ID_EXCLUDE_SETTLE)
+    {
+        ExcludeSettling(m_session);
+        m_session->CalcStats();
+        InitStats(m_stats, m_session);
+        m_graph->Refresh();
+    }
 }
 
 void LogViewFrame::OnHelpAbout(wxCommandEvent& event)
@@ -257,7 +484,9 @@ HelpDialog::HelpDialog(wxWindow *parent) : HelpDialogBase(parent)
         << "Drag up or down with the mouse or use the +/- buttons on the right to change the vertical scale" << BR
         << "<h3>Statistics</h3>"
         << "To exclude a range of points from the statistics, hold down CTRL and drag the mouse," << BR
+        << "To include a range of points from the statistics, hold down Shift and drag the mouse," << BR
         << "CTRL-Click on an excluded range to un-exclude the range of points." << BR
+        << "Right-click on the graph for some more options." << BR
         << "</html>";
 
     m_html->SetPage(s);
@@ -319,10 +548,6 @@ void LogViewFrame::InitGraph()
     ginfo.max_ofs = mxr;
     ginfo.max_mass = mxmass;
     ginfo.max_snr = mxsnr;
-
-    wxCommandEvent dummy;
-    OnHReset(dummy);
-    OnVReset(dummy);
 }
 
 void LogViewFrame::InitCalDisplay()
@@ -334,7 +559,7 @@ void LogViewFrame::InitCalDisplay()
     disp.firstNorth = -1;
     double maxv = 0.0;
     int i = 0;
-    //for (const auto& p : m_calibration->entries)
+
     for (auto it = m_calibration->entries.begin(); it != m_calibration->entries.end(); ++it)
     {
         const auto& p = *it;
@@ -356,25 +581,13 @@ void LogViewFrame::InitCalDisplay()
     }
 
     if (maxv == 0.0)
-        maxv = 1.0;
+        maxv = 25.0;
     int size = wxMin(m_graph->GetSize().GetWidth(), m_graph->GetSize().GetHeight());
     size = std::max(size, 40); // prevent -ive scale
     disp.scale = (double)(size - 30) / (2.0 * maxv);
     disp.min_scale = std::min(disp.scale, MIN_HSCALE_CAL);
 
     disp.valid = true;
-}
-
-static void InitStats(wxGrid *stats, const GuideSession *session)
-{
-    stats->BeginBatch();
-    stats->SetCellValue(0, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_ra, session->rms_ra));
-    stats->SetCellValue(1, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_dec, session->rms_dec));
-    double tot = sqrt(session->rms_ra * session->rms_ra + session->rms_dec * session->rms_dec);
-    stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * tot, tot));
-    stats->SetCellValue(0, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
-    stats->SetCellValue(1, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
-    stats->EndBatch();
 }
 
 void LogViewFrame::OnCellSelected(wxGridEvent& event)
@@ -412,13 +625,48 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
 
         if (m_session)
         {
-            InitStats(m_stats, m_session);
-            if (!m_session->m_ginfo.IsValid())
+            bool first = !m_session->m_ginfo.IsValid();
+            if (first)
                 InitGraph();
-            UpdateScrollbar();
+
+            if (!GetSizer()->IsShown(m_guideControlsSizer))
+            {
+                bool enable = true;
+                m_vplus->Enable(enable);
+                m_vminus->Enable(enable);
+                m_vreset->Enable(enable);
+                m_scrollbar->Enable(enable);
+
+                GetSizer()->Show(m_guideControlsSizer);
+                Layout();
+            }
+
+            InitStats(m_stats, m_session);
+
+            if (first)
+            {
+                wxCommandEvent dummy;
+                OnHReset(dummy);
+                OnVReset(dummy);
+            }
+            else
+                UpdateScrollbar();
         }
         else
         {
+            // do this first so InitCalDisplay has the right window sizes
+            if (GetSizer()->IsShown(m_guideControlsSizer))
+            {
+                bool enable = false;
+                m_vplus->Enable(enable);
+                m_vminus->Enable(enable);
+                m_vreset->Enable(enable);
+                m_scrollbar->Enable(enable);
+
+                GetSizer()->Hide(m_guideControlsSizer);
+                Layout();
+            }
+
             m_stats->ClearGrid();
             if (!m_calibration->display.valid)
                 InitCalDisplay();
@@ -464,6 +712,12 @@ void LogViewFrame::OnLeftDown(wxMouseEvent& event)
         s_drag.m_anchorPoint = s_drag.m_endPoint = event.GetPosition();
         s_drag.dragMoved = false;
     }
+    else if (m_session && event.ShiftDown())
+    {
+        s_drag.m_dragMode = DRAG_INCLUDE;
+        s_drag.m_anchorPoint = s_drag.m_endPoint = event.GetPosition();
+        s_drag.dragMoved = false;
+    }
     else
     {
         s_drag.m_dragMode = DRAG_PAN;
@@ -500,6 +754,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
         {
             s_drag.m_rate.x = (double)(event.GetPosition().x - s_drag.m_mousePos[0].x) / (double)dt;
             s_drag.m_rate.y = (double)(event.GetPosition().y - s_drag.m_mousePos[0].y) / (double)dt;
+            s_drag.decel = DECEL;
             if (fabs(s_drag.m_rate.x) > DECEL || fabs(s_drag.m_rate.y) > DECEL)
             {
                 s_drag.m_mousePos[1] = event.GetPosition();
@@ -508,7 +763,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
             }
         }
     }
-    else // DRAG_EXCLUDE
+    else // DRAG_EXCLUDE or DRAG_INCLUDE
     {
         if (m_session)
         {
@@ -516,7 +771,8 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
 
             if (s_drag.dragMoved)
             {
-                // excluding a range
+                // include/exclude a range
+                bool include = s_drag.m_dragMode == DRAG_INCLUDE;
                 wxRect rect(s_drag.m_anchorPoint, s_drag.m_endPoint);
                 GuideSession::EntryVec& entries = m_session->entries;
                 int i0 = (int)(ginfo.i0 + 0.5 + rect.GetLeft() / ginfo.hscale);
@@ -529,7 +785,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
                         i1 = m_session->entries.size() - 1;
 
                     for (int j = i0; j <= i1; j++)
-                        entries[j].included = false;
+                        entries[j].included = include;
                     m_graph->Refresh();
                     m_session->CalcStats();
                     InitStats(m_stats, m_session);
@@ -565,7 +821,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
     event.Skip();
 }
 
-void LogViewFrame::OnMove( wxMouseEvent& event )
+void LogViewFrame::OnMove(wxMouseEvent& event)
 {
     if (m_session)
     {
@@ -608,7 +864,12 @@ void LogViewFrame::OnMove( wxMouseEvent& event )
 
             if (s_drag.drag_direction == 1)
             {
-                ginfo.xofs -= dx;
+                int newpos = ginfo.xofs - dx;
+                if (newpos < ginfo.xmin)
+                    newpos = ginfo.xmin;
+                else if (newpos > ginfo.xmax)
+                    newpos = ginfo.xmax;
+                ginfo.xofs = newpos;
                 UpdateRange(&ginfo);
 
                 wxLongLong_t now = ::now();
@@ -628,7 +889,7 @@ void LogViewFrame::OnMove( wxMouseEvent& event )
 
             m_graph->Refresh();
         }
-        else // DRAG_EXCLUDE
+        else // DRAG_EXCLUDE / DRAG_INCLUDE
         {
             s_drag.m_endPoint = event.GetPosition();
             wxPoint d = s_drag.m_endPoint - s_drag.m_anchorPoint;
@@ -672,7 +933,7 @@ void LogViewFrame::OnCaptureLost(wxMouseCaptureLostEvent& evt)
 void LogViewFrame::OnTimer(wxTimerEvent& evt)
 {
     wxLongLong_t now = ::now();
-    long dt = now /*evt.GetTimestamp()*/ - s_drag.m_mouseTime[1];
+    long dt = now - s_drag.m_mouseTime[1];
     int dx = (int)floor(s_drag.m_rate.x * dt);
     int dy = (int)floor(s_drag.m_rate.y * dt);
 
@@ -682,6 +943,10 @@ void LogViewFrame::OnTimer(wxTimerEvent& evt)
     {
         GraphInfo& ginfo = m_session->m_ginfo;
         ginfo.xofs -= dx;
+        if (ginfo.xofs < ginfo.xmin)
+            ginfo.xofs = ginfo.xmin;
+        else if (ginfo.xofs > ginfo.xmax)
+            ginfo.xofs = ginfo.xmax;
         UpdateRange(&ginfo);
         UpdateScrollbar();
         m_graph->Refresh();
@@ -694,17 +959,19 @@ void LogViewFrame::OnTimer(wxTimerEvent& evt)
         m_graph->Refresh();
     }
 
-    if (s_drag.m_rate.x > DECEL)
-        s_drag.m_rate.x -= DECEL;
-    else if (s_drag.m_rate.x < -DECEL)
-        s_drag.m_rate.x += DECEL;
+    double decel = s_drag.decel;
+    s_drag.decel += DECEL;
+    if (s_drag.m_rate.x > decel)
+        s_drag.m_rate.x -= decel;
+    else if (s_drag.m_rate.x < -decel)
+        s_drag.m_rate.x += decel;
     else
         s_drag.m_rate.x = 0.0;
 
-    if (s_drag.m_rate.y > DECEL)
-        s_drag.m_rate.y -= DECEL;
-    else if (s_drag.m_rate.y < -DECEL)
-        s_drag.m_rate.y += DECEL;
+    if (s_drag.m_rate.y > decel)
+        s_drag.m_rate.y -= decel;
+    else if (s_drag.m_rate.y < -decel)
+        s_drag.m_rate.y += decel;
     else
         s_drag.m_rate.y = 0.0;
 
@@ -725,14 +992,7 @@ void LogViewFrame::OnScroll(wxScrollEvent& event)
     }
 
     int t = event.GetEventType();
-    if (//t == wxEVT_SCROLL_TOP ||
-        //t == wxEVT_SCROLL_BOTTOM ||
-        //t == wxEVT_SCROLL_LINEUP ||
-        //t == wxEVT_SCROLL_LINEDOWN ||
-        //t == wxEVT_SCROLL_PAGEUP ||
-        //t == wxEVT_SCROLL_PAGEDOWN ||
-//        t == wxEVT_SCROLL_THUMBTRACK ||
-        t == wxEVT_SCROLL_THUMBRELEASE ||
+    if (t == wxEVT_SCROLL_THUMBRELEASE ||
         t == wxEVT_SCROLL_CHANGED)
     {
         event.Skip();
@@ -746,6 +1006,10 @@ void LogViewFrame::OnScroll(wxScrollEvent& event)
         ginfo.xofs = 0;
     else
         ginfo.xofs = pos;
+    if (ginfo.xofs < ginfo.xmin)
+        ginfo.xofs = ginfo.xmin;
+    else if (ginfo.xofs > ginfo.xmax)
+        ginfo.xofs = ginfo.xmax;
 
     UpdateRange(&ginfo);
     m_graph->Refresh();
@@ -812,7 +1076,6 @@ static void PaintCalibration(wxDC& dc, const Calibration *cal, wxWindow *graph)
     while (true)
     {
         int ir = (int)(r * scale);
-//        if (ir >= size / 2)
         if (r > 25)
             break;
         dc.DrawCircle(x0, y0, ir);
@@ -838,8 +1101,9 @@ static void PaintCalibration(wxDC& dc, const Calibration *cal, wxWindow *graph)
             break;
         }
         dc.DrawCircle(x0 + (int)(p->dx * scale), y0 - (int)(p->dy * scale), 7);
-char ch = "WEBNS"[p->direction];
-dc.DrawText(wxString::Format("%c%d", ch, p->step), x0 + (int)(p->dx * scale) + 8, y0 - (int)(p->dy * scale) + 8);
+
+        char ch = "WEBNS"[p->direction];
+        dc.DrawText(wxString::Format("%c%d", ch, p->step), x0 + (int)(p->dx * scale) + 8, y0 - (int)(p->dy * scale) + 8);
     }
 
     if (cal->display.firstWest != -1 && cal->display.lastWest != cal->display.firstWest)
@@ -895,7 +1159,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     double x0 = (double)i0 * ginfo.hscale - (double)ginfo.xofs;
     int fullw = m_graph->GetSize().GetWidth();
     int y0 = m_graph->GetSize().GetHeight() / 2;
-    unsigned int cnt = (unsigned int) (ceil(ginfo.i1) - floor(ginfo.i0)) + 1;
+    unsigned int cnt = i1 >= i0 ? i1 - i0 + 1 : 0;
     if (s_tmp.size < cnt)
     {
         delete[] s_tmp.pts;
@@ -1215,14 +1479,20 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         }
     }
 
-    if (s_drag.m_dragging && s_drag.m_dragMode == DRAG_EXCLUDE && s_drag.m_anchorPoint.x != s_drag.m_endPoint.x)
+    if (s_drag.m_dragging &&
+        (s_drag.m_dragMode == DRAG_EXCLUDE || s_drag.m_dragMode == DRAG_INCLUDE) &&
+        s_drag.m_anchorPoint.x != s_drag.m_endPoint.x)
     {
         wxRect rect(s_drag.m_anchorPoint, s_drag.m_endPoint);
 
         wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
         if (gc)
         {
-            gc->SetBrush(wxColour(192, 192, 192, 64));
+            if (s_drag.m_dragMode == DRAG_EXCLUDE)
+                gc->SetBrush(wxColour(192, 192, 192, 64));
+            else
+                gc->SetBrush(wxColour(255, 255, 92, 64));
+
             gc->DrawRectangle(rect.x, 0, rect.width, m_graph->GetSize().GetHeight());
             delete gc;
         }
@@ -1263,34 +1533,40 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
     }
 }
 
-static void Rescale(GraphInfo *ginfo, double f, unsigned int width)
+static void Rescale(GuideSession *session, double f, unsigned int width)
 {
-    double s = ginfo->hscale * f;
+    GraphInfo& ginfo = session->m_ginfo;
+    double s = ginfo.hscale * f;
     if (s < MIN_HSCALE_GUIDE)
     {
         s = MIN_HSCALE_GUIDE;
-        f = s / ginfo->hscale;
+        f = s / ginfo.hscale;
     }
     if (s > MAX_HSCALE_GUIDE)
     {
         s = MAX_HSCALE_GUIDE;
-        f = s / ginfo->hscale;
+        f = s / ginfo.hscale;
     }
 
     // keep center stationary
     double hw = (double)(width / 2);
-    ginfo->xofs = (int)(f * ((double)ginfo->xofs + hw) - hw);
-    ginfo->hscale = s;
-    UpdateRange(ginfo);
+    ginfo.xofs = (int)(f * ((double)ginfo.xofs + hw) - hw);
+    ginfo.hscale = s;
+    ginfo.xmax = (int)(ginfo.hscale * session->entries.size()) - MIN_SHOW;
+    if (ginfo.xofs < ginfo.xmin)
+        ginfo.xofs = ginfo.xmin;
+    if (ginfo.xofs > ginfo.xmax)
+        ginfo.xofs = ginfo.xmax;
+    UpdateRange(&ginfo);
 }
 
-void LogViewFrame::OnHMinus( wxCommandEvent& event )
+void LogViewFrame::OnHMinus(wxCommandEvent& event)
 {
     if (m_session)
     {
         if (m_session->m_ginfo.hscale <= MIN_HSCALE_GUIDE)
             return;
-        Rescale(&m_session->m_ginfo, 1.0 / 1.1, m_graph->GetSize().GetWidth());
+        Rescale(m_session, 1.0 / 1.1, m_graph->GetSize().GetWidth());
         m_graph->Refresh();
         UpdateScrollbar();
     }
@@ -1304,13 +1580,13 @@ void LogViewFrame::OnHMinus( wxCommandEvent& event )
     }
 }
 
-void LogViewFrame::OnHPlus( wxCommandEvent& event )
+void LogViewFrame::OnHPlus(wxCommandEvent& event)
 {
     if (m_session)
     {
         if (m_session->m_ginfo.hscale >= MAX_HSCALE_GUIDE)
             return;
-        Rescale(&m_session->m_ginfo, 1.1, m_graph->GetSize().GetWidth());
+        Rescale(m_session, 1.1, m_graph->GetSize().GetWidth());
         m_graph->Refresh();
         UpdateScrollbar();
     }
@@ -1323,7 +1599,7 @@ void LogViewFrame::OnHPlus( wxCommandEvent& event )
     }
 }
 
-void LogViewFrame::OnHReset( wxCommandEvent& event )
+void LogViewFrame::OnHReset(wxCommandEvent& event)
 {
     if (m_session)
     {
@@ -1343,6 +1619,8 @@ void LogViewFrame::OnHReset( wxCommandEvent& event )
         ginfo.hscale = scale;
         ginfo.width = width;
         ginfo.xofs = 0;
+        ginfo.xmin = -ginfo.width + MIN_SHOW;
+        ginfo.xmax = (int)(ginfo.hscale * m_session->entries.size()) - MIN_SHOW;
         UpdateRange(&ginfo);
         m_graph->Refresh();
         UpdateScrollbar();
@@ -1371,6 +1649,12 @@ void LogViewFrame::OnSizeGraph(wxSizeEvent& event)
     ginfo.width = event.GetSize().GetWidth();
     ginfo.hscale = (double)ginfo.width / (ginfo.i1 - ginfo.i0);
     ginfo.xofs = (int)(ginfo.hscale * ginfo.i0);
+    ginfo.xmin = -ginfo.width + MIN_SHOW;
+    ginfo.xmax = (int)(ginfo.hscale * m_session->entries.size()) - MIN_SHOW;
+    if (ginfo.xofs < ginfo.xmin)
+        ginfo.xofs = ginfo.xmin;
+    if (ginfo.xofs > ginfo.xmax)
+        ginfo.xofs = ginfo.xmax;
     m_graph->Refresh();
     UpdateScrollbar();
 }
