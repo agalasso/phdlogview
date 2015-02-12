@@ -79,6 +79,16 @@ struct PointArray
 };
 static PointArray s_tmp;
 
+struct ScatterPlot
+{
+    wxBitmap *bitmap;
+    bool valid;
+    ScatterPlot() : bitmap(0), valid(false) { }
+    ~ScatterPlot() { delete bitmap; }
+    void Invalidate() { valid = false; }
+};
+static ScatterPlot s_scatter;
+
 struct FileDropTarget : public wxFileDropTarget
 {
     LogViewFrame *m_lvf;
@@ -339,6 +349,7 @@ void LogViewFrame::OpenLog(const wxString& filename)
     m_sessions->GoToCell(0, 0);
     m_sessions->EndBatch();
 
+    s_scatter.Invalidate();
     m_graph->Refresh();
 }
 
@@ -425,6 +436,7 @@ void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
         IncludeAll(m_session->entries);
         m_session->CalcStats();
         InitStats(m_stats, m_session);
+        s_scatter.Invalidate();
         m_graph->Refresh();
     }
     else if (event.GetId() == ID_INCLUDE_NONE)
@@ -432,6 +444,7 @@ void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
         IncludeNone(m_session->entries);
         m_session->CalcStats();
         InitStats(m_stats, m_session);
+        s_scatter.Invalidate();
         m_graph->Refresh();
     }
     else if (event.GetId() == ID_EXCLUDE_SETTLE)
@@ -439,6 +452,7 @@ void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
         ExcludeSettling(m_session);
         m_session->CalcStats();
         InitStats(m_stats, m_session);
+        s_scatter.Invalidate();
         m_graph->Refresh();
     }
 }
@@ -681,6 +695,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
         m_stats->ClearGrid();
     }
 
+    s_scatter.Invalidate();
     m_graph->Refresh();
 
 out:
@@ -787,6 +802,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
 
                     for (int j = i0; j <= i1; j++)
                         entries[j].included = include;
+                    s_scatter.Invalidate();
                     m_graph->Refresh();
                     m_session->CalcStats();
                     InitStats(m_stats, m_session);
@@ -811,6 +827,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
                             break;
                         entries[j].included = true;
                     }
+                    s_scatter.Invalidate();
                     m_graph->Refresh();
                     m_session->CalcStats();
                     InitStats(m_stats, m_session);
@@ -1502,51 +1519,65 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     // scatter plot
     if (m_scatter->IsChecked())
     {
-        dc.SetBrush(*wxBLACK_BRUSH);
-        dc.SetPen(*wxGREY_PEN);
-        wxSize sz(m_graph->GetSize());
-        int h = sz.GetHeight() / 2 - 40;
-        if (h < 140)
-            h = 140;
-        wxPoint pos(sz.GetWidth() - h, 0);
-        dc.DrawRectangle(pos, wxSize(h, h));
-        dc.DrawLine(pos.x + h / 2, 0, pos.x + h / 2, h);
-        dc.DrawLine(pos.x, h / 2, pos.x + h, h / 2);
+        int h = m_graph->GetSize().GetHeight() / 2 - 40;
+        if (h < 140) h = 140;
 
-        dc.SetPen(*wxYELLOW_PEN);
-
-        double mx = 0.0;
-        for (auto it = entries.begin(); it != entries.end(); ++it)
+        if (!s_scatter.valid)
         {
-            if (it->included)
+            if (!s_scatter.bitmap || s_scatter.bitmap->GetSize().GetWidth() != h)
             {
-                double x = fabs(radec ? it->raraw : it->dx);
-                if (x > mx)
-                    mx = x;
-                double y = fabs(radec ? it->decraw : it->dy);
-                if (y > mx)
-                    mx = y;
+                delete s_scatter.bitmap;
+                s_scatter.bitmap = new wxBitmap(h, h, dc);
             }
-        }
-        if (mx == 0.0)
-            mx = 1.0;
+            wxMemoryDC mdc(*s_scatter.bitmap);
 
-        for (auto it = entries.begin(); it != entries.end(); ++it)
-        {
-            if (it->included)
+            mdc.SetBrush(*wxBLACK_BRUSH);
+            mdc.SetPen(*wxGREY_PEN);
+            mdc.DrawRectangle(0, 0, h, h);
+            mdc.DrawLine(h / 2, 0, h / 2, h);
+            mdc.DrawLine(0, h / 2, h, h / 2);
+
+            mdc.SetPen(*wxYELLOW_PEN);
+
+            double mx = 0.0;
+            for (auto it = entries.begin(); it != entries.end(); ++it)
             {
-                int x = (int)((double)(radec ? it->raraw : it->dx) / mx * (double)(h / 2 - 4));
-                int y = (int)((double)(radec ? it->decraw : it->dy) / mx * (double)(h / 2 - 4));
-                dc.DrawPoint(pos.x + h / 2 + x, pos.y + h / 2 - y);
+                if (it->included)
+                {
+                    double x = fabs(radec ? it->raraw : it->dx);
+                    if (x > mx)
+                        mx = x;
+                    double y = fabs(radec ? it->decraw : it->dy);
+                    if (y > mx)
+                        mx = y;
+                }
             }
+            if (mx == 0.0)
+                mx = 1.0;
+
+            double scale = (double)(h / 2 - 4) / mx;
+
+            for (auto it = entries.begin(); it != entries.end(); ++it)
+            {
+                if (it->included)
+                {
+                    int x = (int)((double)(radec ? it->raraw : it->dx) * scale);
+                    int y = (int)((double)(radec ? it->decraw : it->dy) * scale);
+                    mdc.DrawPoint(h / 2 + x, h / 2 - y);
+                }
+            }
+
+            mdc.SetPen(wxPen(wxColour(255, 0, 255), 1/*, wxDOT*/));
+            mdc.SetBrush(*wxTRANSPARENT_BRUSH);
+            double rx = m_session->rms_ra;
+            double ry = m_session->rms_dec;
+            int r = (int)(hypot(rx, ry)  * scale);
+            mdc.DrawCircle(h / 2, h / 2, r);
+
+            s_scatter.valid = true;
         }
 
-        dc.SetPen(wxPen(wxColour(255, 0, 255), 1/*, wxDOT*/));
-        dc.SetBrush(*wxTRANSPARENT_BRUSH);
-        double rx = m_session->rms_ra;
-        double ry = m_session->rms_dec;
-        int r = (int)(hypot(rx, ry) / mx * (double)(h / 2 - 4));
-        dc.DrawCircle(pos.x + h / 2, pos.y + h / 2, r);
+        dc.DrawBitmap(*s_scatter.bitmap, m_graph->GetSize().GetWidth() - h, 0);
     }
 }
 
@@ -1706,6 +1737,7 @@ void LogViewFrame::OnSizeGraph(wxSizeEvent& event)
         ginfo.xofs = ginfo.xmin;
     if (ginfo.xofs > ginfo.xmax)
         ginfo.xofs = ginfo.xmax;
+    s_scatter.Invalidate();
     m_graph->Refresh();
     UpdateScrollbar();
 }
@@ -1717,6 +1749,7 @@ void LogViewFrame::OnUnits( wxCommandEvent& event )
 
 void LogViewFrame::OnAxes( wxCommandEvent& event )
 {
+    s_scatter.Invalidate();
     m_graph->Refresh();
 }
 
