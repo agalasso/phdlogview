@@ -13,6 +13,7 @@
 #include <wx/aboutdlg.h>
 #include <wx/graphics.h>
 #include <wx/valnum.h>
+#include <wx/stopwatch.h>
 
 #include <algorithm>
 #include <fstream>
@@ -1496,6 +1497,56 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             gc->DrawRectangle(rect.x, 0, rect.width, m_graph->GetSize().GetHeight());
             delete gc;
         }
+    }
+
+    // scatter plot
+    if (m_scatter->IsChecked())
+    {
+        dc.SetBrush(*wxBLACK_BRUSH);
+        dc.SetPen(*wxGREY_PEN);
+        wxSize sz(m_graph->GetSize());
+        int h = sz.GetHeight() / 2 - 40;
+        if (h < 140)
+            h = 140;
+        wxPoint pos(sz.GetWidth() - h, 0);
+        dc.DrawRectangle(pos, wxSize(h, h));
+        dc.DrawLine(pos.x + h / 2, 0, pos.x + h / 2, h);
+        dc.DrawLine(pos.x, h / 2, pos.x + h, h / 2);
+
+        dc.SetPen(*wxYELLOW_PEN);
+
+        double mx = 0.0;
+        for (auto it = entries.begin(); it != entries.end(); ++it)
+        {
+            if (it->included)
+            {
+                double x = fabs(radec ? it->raraw : it->dx);
+                if (x > mx)
+                    mx = x;
+                double y = fabs(radec ? it->decraw : it->dy);
+                if (y > mx)
+                    mx = y;
+            }
+        }
+        if (mx == 0.0)
+            mx = 1.0;
+
+        for (auto it = entries.begin(); it != entries.end(); ++it)
+        {
+            if (it->included)
+            {
+                int x = (int)((double)(radec ? it->raraw : it->dx) / mx * (double)(h / 2 - 4));
+                int y = (int)((double)(radec ? it->decraw : it->dy) / mx * (double)(h / 2 - 4));
+                dc.DrawPoint(pos.x + h / 2 + x, pos.y + h / 2 - y);
+            }
+        }
+
+        dc.SetPen(wxPen(wxColour(255, 0, 255), 1/*, wxDOT*/));
+        dc.SetBrush(*wxTRANSPARENT_BRUSH);
+        double rx = m_session->rms_ra;
+        double ry = m_session->rms_dec;
+        int r = (int)(hypot(rx, ry) / mx * (double)(h / 2 - 4));
+        dc.DrawCircle(pos.x + h / 2, pos.y + h / 2, r);
     }
 }
 
