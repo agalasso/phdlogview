@@ -852,7 +852,7 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
             if (i >= 0 && i < (int)entries.size())
             {
                 const GuideEntry& ent = entries[i];
-                wxDateTime t(m_session->starts + wxTimeSpan(0, 0, ent.dt));
+                wxDateTime t(m_session->starts + wxTimeSpan(0, 0, 0, (wxLongLong)(ent.dt * 1000.0)));
                 m_rowInfo->SetValue(wxString::Format("%s Frame %d t=%.2f (x,y)=(%.2f,%.2f) (RA,Dec)=(%.2f,%.2f) guide (%.2f,%.2f) corr (%d,%d) m=%d SNR=%.1f %s",
                     t.FormatISOCombined(' '), ent.frame, ent.dt, ent.dx, ent.dy, ent.raraw, ent.decraw, ent.raguide, ent.decguide, ent.radur, ent.decdur, ent.mass, ent.snr, ent.info));
             }
@@ -1230,6 +1230,34 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 dc.DrawLine(0, y, fullw, y);
                 dc.DrawText(wxString::Format(format, dy), 3, y + 2);
+            }
+        }
+
+        // vertical ticks
+        if (i1 > i0)
+        {
+            double dt0 = m_session->entries[i0].dt;
+            double dt1 = m_session->entries[i1].dt;
+            double tspan = dt1 - dt0;
+            int x0 = (int)(((double)i0 + 0.5) * ginfo.hscale) - ginfo.xofs;
+            int x1 = (int)(((double)i1 + 0.5) * ginfo.hscale) - ginfo.xofs;
+            double r = (double)(x1 - x0) / tspan; // pixels per second
+            int secs = (int)(ceil(80.0 / (r * 60.0)) * 60.0); // seconds per tick
+            wxDateTime ti0(m_session->starts + wxTimeSpan(0, 0, 0, (wxLongLong)(dt0 * 1000.0)));
+            wxDateTime t0(ti0);
+            time_t ticks = ((t0.GetTicks() + secs - 1) / secs) * secs;
+            t0.Set(ticks); // time of first tick
+            double t = (double)(t0 - ti0).GetMilliseconds().GetValue() / 1000.0;
+            wxDateTime t1(m_session->starts + wxTimeSpan(0, 0, 0, (wxLongLong)(dt1 * 1000.0)));
+            double tend = (double)(t1 - ti0).GetMilliseconds().GetValue() / 1000.0;
+
+            dc.SetPen(*wxGREY_PEN);
+            for (; t < tend; t += secs)
+            {
+                int x = (int)((double) x0 + r * t);
+                dc.DrawLine(x, 0, x, 10);
+                wxDateTime wxt(ti0 + wxTimeSpan(0, 0, 0, (wxLongLong)(t * 1000.0)));
+                dc.DrawText(wxt.Format("%H:%M"), x + 3, 1);
             }
         }
     }
