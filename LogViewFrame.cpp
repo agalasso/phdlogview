@@ -903,7 +903,10 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
                 UpdateScrollbar();
             }
             else
+            {
                 ginfo.vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
+                s_scatter.Invalidate();
+            }
 
             m_graph->Refresh();
         }
@@ -1567,23 +1570,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
             mdc.SetPen(*wxYELLOW_PEN);
 
-            double mx = 0.0;
-            for (auto it = entries.begin(); it != entries.end(); ++it)
-            {
-                if (it->included)
-                {
-                    double x = fabs(radec ? it->raraw : it->dx);
-                    if (x > mx)
-                        mx = x;
-                    double y = fabs(radec ? it->decraw : it->dy);
-                    if (y > mx)
-                        mx = y;
-                }
-            }
-            if (mx == 0.0)
-                mx = 1.0;
-
-            double scale = (double)(h / 2 - 4) / mx;
+            double scale = ginfo.vscale * h * 0.5 / (double)(m_graph->GetSize().GetHeight() / 2 - 10);
 
             for (auto it = entries.begin(); it != entries.end(); ++it)
             {
@@ -1614,6 +1601,7 @@ void LogViewFrame::OnVPlus( wxCommandEvent& event )
     if (m_session)
     {
         m_session->m_ginfo.vscale *= 1.1;
+        s_scatter.Invalidate();
         m_graph->Refresh();
     }
 }
@@ -1623,6 +1611,7 @@ void LogViewFrame::OnVMinus( wxCommandEvent& event )
     if (m_session)
     {
         m_session->m_ginfo.vscale /= 1.1;
+        s_scatter.Invalidate();
         m_graph->Refresh();
     }
 }
@@ -1639,6 +1628,7 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
         else
             ginfo.vscale = 1.0;
 
+        s_scatter.Invalidate();
         m_graph->Refresh();
     }
 }
