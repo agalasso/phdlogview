@@ -1,5 +1,10 @@
 cmake_minimum_required (VERSION 2.8.11)
 
+# this must appear very early in the file
+if (WIN32)
+  set(CMAKE_GENERATOR_TOOLSET "v120_xp" CACHE STRING "Platform Toolset" FORCE)
+endif()
+
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
   if (POLICY CMP0043)
