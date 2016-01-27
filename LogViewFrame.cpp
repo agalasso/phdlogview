@@ -853,8 +853,8 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
             {
                 const GuideEntry& ent = entries[i];
                 wxDateTime t(m_session->starts + wxTimeSpan(0, 0, 0, (wxLongLong)(ent.dt * 1000.0)));
-                m_rowInfo->SetValue(wxString::Format("%s Frame %d t=%.2f (x,y)=(%.2f,%.2f) (RA,Dec)=(%.2f,%.2f) guide (%.2f,%.2f) corr (%d,%d) m=%d SNR=%.1f %s",
-                    t.FormatISOCombined(' '), ent.frame, ent.dt, ent.dx, ent.dy, ent.raraw, ent.decraw, ent.raguide, ent.decguide, ent.radur, ent.decdur, ent.mass, ent.snr, ent.info));
+                m_rowInfo->SetValue(wxString::Format("%s Frame %d t=%.2f (x,y)=(%.2f,%.2f) (RA,Dec)=(%.2f,%.2f) guide (%.2f,%.2f) corr (%d,%d) m=%d SNR=%.1f%s %s",
+                    t.FormatISOCombined(' '), ent.frame, ent.dt, ent.dx, ent.dy, ent.raraw, ent.decraw, ent.raguide, ent.decguide, ent.radur, ent.decdur, ent.mass, ent.snr, ent.err == 1 ? " SAT" : "", ent.info));
             }
 
             event.Skip();
