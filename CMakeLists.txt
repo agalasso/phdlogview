@@ -12,6 +12,14 @@ if(COMMAND cmake_policy)
   endif()
 endif(COMMAND cmake_policy)
 
+if(APPLE)
+  # should be done *before* declaring project.
+  set(CMAKE_OSX_ARCHITECTURES i386 CACHE STRING "build architecture for OSX" FORCE)
+  set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32"   CACHE STRING "Flags used by the compiler during all build types")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "Flags used by the compiler during all build types")
+  set(CMAKE_MACOSX_RPATH TRUE)
+endif()
+
 project (phdlogview)
 
 set(srcdir ${CMAKE_SOURCE_DIR})
@@ -51,6 +59,15 @@ else()
   elseif(HAS_CXX0X_FLAG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
   endif()
+
+  if(APPLE)
+    check_cxx_compiler_flag(-stdlib=libc++ HAS_LIBCXX11_FLAG)
+
+    if(HAS_LIBCXX11_FLAG)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    endif()
+  endif()
+
 endif()
 
 if(WIN32)
@@ -128,7 +145,13 @@ set (ALL_SRC
   ${FBSRC}
 )
 
-add_executable(phdlogview WIN32 ${ALL_SRC})
+if(WIN32)
+  add_executable(phdlogview WIN32 ${ALL_SRC})
+elseif(APPLE)
+  add_executable(phdlogview MACOSX_BUNDLE ${ALL_SRC})
+elseif(UNIX)
+  add_executable(phdlogview ${ALL_SRC})
+endif()
 
 target_compile_definitions( phdlogview PRIVATE "${wxWidgets_DEFINITIONS}" "HAVE_TYPE_TRAITS")
 target_compile_options(     phdlogview PRIVATE "${wxWidgets_CXX_FLAGS};")
