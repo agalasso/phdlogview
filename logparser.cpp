@@ -524,6 +524,10 @@ redo:
                 GetDbl(ln, "Max DEC duration = ", &mnt.ylim.maxDur, 0.0);
             }
 
+            auto end = ln.find_last_not_of(" \r\n\t");
+            if (end != std::string::npos)
+                ln = ln.substr(0, end + 1);
+
             s->hdr.push_back(ln);
         }
         else if (st == GUIDING)

@@ -1558,7 +1558,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             if (!s_scatter.bitmap || s_scatter.bitmap->GetSize().GetWidth() != h)
             {
                 delete s_scatter.bitmap;
-                s_scatter.bitmap = new wxBitmap(h, h, dc);
+                s_scatter.bitmap = new wxBitmap(h, h);
             }
             wxMemoryDC mdc(*s_scatter.bitmap);
 

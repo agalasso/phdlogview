@@ -130,13 +130,15 @@ set (FBSRC
 
 if (WIN32)
   set (WXFB "C:\\Program Files (x86)\\wxFormBuilder\\wxFormBuilder.exe")
+  set (WXFB_GENERATE "/g")
 else()
-  set (WXFB wxFormBuilder)
+  set (WXFB wxformbuilder)
+  set (WXFB_GENERATE "-g")
 endif()
 
 ADD_CUSTOM_COMMAND(
   OUTPUT ${FBSRC}
-  COMMAND ${WXFB} /g ${srcdir}/phdlogview.fbp
+  COMMAND ${WXFB} ${WXFB_GENERATE} ${srcdir}/phdlogview.fbp
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/phdlogview.fbp
 )
 

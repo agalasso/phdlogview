@@ -93,25 +93,26 @@
                 <property name="name">bSizer1</property>
                 <property name="orient">wxVERTICAL</property>
                 <property name="permission">none</property>
-                <object class="sizeritem" expanded="0">
+                <object class="sizeritem" expanded="1">
                     <property name="border">5</property>
                     <property name="flag">wxEXPAND</property>
                     <property name="proportion">0</property>
-                    <object class="wxBoxSizer" expanded="0">
+                    <object class="wxBoxSizer" expanded="1">
                         <property name="minimum_size"></property>
                         <property name="name">bSizer8</property>
                         <property name="orient">wxHORIZONTAL</property>
                         <property name="permission">none</property>
-                        <object class="sizeritem" expanded="0">
+                        <object class="sizeritem" expanded="1">
                             <property name="border">5</property>
                             <property name="flag">wxALL</property>
                             <property name="proportion">0</property>
-                            <object class="wxStaticBoxSizer" expanded="0">
+                            <object class="wxStaticBoxSizer" expanded="1">
                                 <property name="id">wxID_ANY</property>
                                 <property name="label">Log sections</property>
                                 <property name="minimum_size"></property>
                                 <property name="name">sbSizer1</property>
                                 <property name="orient">wxHORIZONTAL</property>
+                                <property name="parent">1</property>
                                 <property name="permission">none</property>
                                 <event name="OnUpdateUI"></event>
                                 <object class="sizeritem" expanded="0">
@@ -259,16 +260,17 @@
                                 </object>
                             </object>
                         </object>
-                        <object class="sizeritem" expanded="0">
+                        <object class="sizeritem" expanded="1">
                             <property name="border">5</property>
                             <property name="flag">wxALL|wxEXPAND</property>
                             <property name="proportion">1</property>
-                            <object class="wxStaticBoxSizer" expanded="0">
+                            <object class="wxStaticBoxSizer" expanded="1">
                                 <property name="id">wxID_ANY</property>
                                 <property name="label">Section heading</property>
                                 <property name="minimum_size"></property>
                                 <property name="name">sbSizer2</property>
                                 <property name="orient">wxVERTICAL</property>
+                                <property name="parent">1</property>
                                 <property name="permission">none</property>
                                 <event name="OnUpdateUI"></event>
                                 <object class="sizeritem" expanded="0">
@@ -306,7 +308,7 @@
                                         <property name="max_size"></property>
                                         <property name="maximize_button">0</property>
                                         <property name="maximum_size"></property>
-                                        <property name="maxlength"></property>
+                                        <property name="maxlength">0</property>
                                         <property name="min_size"></property>
                                         <property name="minimize_button">0</property>
                                         <property name="minimum_size"></property>
@@ -410,7 +412,7 @@
                                 <property name="max_size"></property>
                                 <property name="maximize_button">0</property>
                                 <property name="maximum_size"></property>
-                                <property name="maxlength"></property>
+                                <property name="maxlength">0</property>
                                 <property name="min_size"></property>
                                 <property name="minimize_button">0</property>
                                 <property name="minimum_size"></property>
@@ -1288,6 +1290,7 @@
                                 <property name="minimum_size"></property>
                                 <property name="name">sbSizer4</property>
                                 <property name="orient">wxHORIZONTAL</property>
+                                <property name="parent">1</property>
                                 <property name="permission">none</property>
                                 <event name="OnUpdateUI"></event>
                                 <object class="sizeritem" expanded="0">
@@ -2329,6 +2332,7 @@
                                 <property name="minimum_size"></property>
                                 <property name="name">sbSizer3</property>
                                 <property name="orient">wxVERTICAL</property>
+                                <property name="parent">1</property>
                                 <property name="permission">none</property>
                                 <event name="OnUpdateUI"></event>
                                 <object class="sizeritem" expanded="0">
@@ -2810,7 +2814,7 @@
                 </object>
             </object>
         </object>
-        <object class="Dialog" expanded="0">
+        <object class="Dialog" expanded="1">
             <property name="aui_managed">0</property>
             <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>
             <property name="bg"></property>
@@ -2872,7 +2876,7 @@
             <event name="OnSetFocus"></event>
             <event name="OnSize"></event>
             <event name="OnUpdateUI"></event>
-            <object class="wxBoxSizer" expanded="0">
+            <object class="wxBoxSizer" expanded="1">
                 <property name="minimum_size"></property>
                 <property name="name">bSizer14</property>
                 <property name="orient">wxVERTICAL</property>
@@ -2887,6 +2891,7 @@
                         <property name="minimum_size"></property>
                         <property name="name">sbSizer5</property>
                         <property name="orient">wxVERTICAL</property>
+                        <property name="parent">1</property>
                         <property name="permission">none</property>
                         <event name="OnUpdateUI"></event>
                         <object class="sizeritem" expanded="0">
@@ -3220,7 +3225,7 @@
                                                         <property name="max_size"></property>
                                                         <property name="maximize_button">0</property>
                                                         <property name="maximum_size"></property>
-                                                        <property name="maxlength"></property>
+                                                        <property name="maxlength">0</property>
                                                         <property name="min_size"></property>
                                                         <property name="minimize_button">0</property>
                                                         <property name="minimum_size"></property>
@@ -3488,7 +3493,7 @@
                                                         <property name="max_size"></property>
                                                         <property name="maximize_button">0</property>
                                                         <property name="maximum_size"></property>
-                                                        <property name="maxlength"></property>
+                                                        <property name="maxlength">0</property>
                                                         <property name="min_size"></property>
                                                         <property name="minimize_button">0</property>
                                                         <property name="minimum_size"></property>
