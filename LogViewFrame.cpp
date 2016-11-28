@@ -1633,6 +1633,11 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
     }
 }
 
+void LogViewFrame::OnVLock(wxCommandEvent& event)
+{
+
+}
+
 static void Rescale(GuideSession *session, double f, unsigned int width)
 {
     GraphInfo& ginfo = session->m_ginfo;

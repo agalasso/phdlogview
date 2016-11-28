@@ -38,6 +38,7 @@ private:
     void OnVPlus(wxCommandEvent& event);
     void OnVMinus(wxCommandEvent& event);
     void OnVReset(wxCommandEvent& event);
+    void OnVLock(wxCommandEvent& event);
     void OnHMinus(wxCommandEvent& event);
     void OnHPlus(wxCommandEvent& event);
     void OnHReset(wxCommandEvent& event);
