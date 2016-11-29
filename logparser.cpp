@@ -440,6 +440,14 @@ void GuideSession::CalcStats()
     peak_dec = peak_d;
 }
 
+static std::string rtrim(const std::string& ln)
+{
+    auto end = ln.find_last_not_of(" \r\n\t");
+    if (end != std::string::npos)
+        return ln.substr(0, end + 1);
+    return ln;
+}
+
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
     log.sessions.clear();
@@ -524,11 +532,7 @@ redo:
                 GetDbl(ln, "Max DEC duration = ", &mnt.ylim.maxDur, 0.0);
             }
 
-            auto end = ln.find_last_not_of(" \r\n\t");
-            if (end != std::string::npos)
-                ln = ln.substr(0, end + 1);
-
-            s->hdr.push_back(ln);
+            s->hdr.push_back(rtrim(ln));
         }
         else if (st == GUIDING)
         {
@@ -582,7 +586,7 @@ redo:
                 st = CALIBRATING;
                 continue;
             }
-            cal->hdr.push_back(ln);
+            cal->hdr.push_back(rtrim(ln));
         }
         else if (st == CALIBRATING)
         {
@@ -614,7 +618,7 @@ redo:
             }
             else
             {
-                cal->hdr.push_back(ln);
+                cal->hdr.push_back(rtrim(ln));
             }
         }
     }
