@@ -360,12 +360,17 @@ void LogViewFrame::OnFileExit(wxCommandEvent& event)
 
 void LogViewFrame::OnFileOpen(wxCommandEvent& event)
 {
-    wxFileDialog openFileDialog(this, _("Open PHD2 Guide Log"), "", "",
+    wxFileDialog openFileDialog(this, _("Open PHD2 Guide Log"),
+        Config->Read("/FileOpenDir", wxEmptyString),
+        wxEmptyString,
         "PHD2 Guide Logs (*PHD2_GuideLog*.txt)|*PHD2_GuideLog*.txt|"
         "Text files (*.txt)|*.txt", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
     if (openFileDialog.ShowModal() == wxID_CANCEL)
         return;
+
+    // save the location
+    Config->Write("/FileOpenDir", wxFileName(openFileDialog.GetPath()).GetPath());
 
     OpenLog(openFileDialog.GetPath());
 }
