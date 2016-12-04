@@ -319,6 +319,9 @@ void LogViewFrame::OpenLog(const wxString& filename)
         LogParser().Parse(ifs, s_log);
     }
 
+    if (!s_log.phd_version.empty())
+        SetTitle(wxString::Format(APP_NAME " - %s - PHD2 %s", fn.GetFullName(), s_log.phd_version.c_str()));
+
     // load the grid
     m_sessions->BeginBatch();
     int row = 0;

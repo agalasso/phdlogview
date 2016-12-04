@@ -6,6 +6,7 @@
 #include <wx/wfstream.h>
 #include <wx/regex.h>
 
+static std::string VERSION_PREFIX("PHD2 version ");
 static std::string GUIDING_BEGINS("Guiding Begins at ");
 static std::string GUIDING_HEADING("Frame,Time,mount");
 static std::string MOUNT_KEY("Mount = ");
@@ -76,11 +77,6 @@ inline static void toDouble(const char *s, double *d, double dflt)
 {
     double t;
     *d = toDouble(s, &t) ? t : dflt;
-}
-
-inline static size_t slen(const char *s)
-{
-    return s ? strlen(s) : 0;
 }
 
 static bool ParseEntry(const std::string& ln, GuideEntry& e)
@@ -301,6 +297,11 @@ inline static bool StartsWith(const std::string& s, const std::string& pfx)
     return s.compare(0, pfx.length(), pfx) == 0;
 }
 
+inline static bool IsEmpty(const std::string& s)
+{
+    return s.find_first_not_of(" \t\r\n") == std::string::npos;
+}
+
 static void ParseInfo(const std::string& ln, GuideSession *s)
 {
     InfoEntry e;
@@ -450,6 +451,7 @@ static std::string rtrim(const std::string& ln)
 
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
+    log.phd_version.clear();
     log.sessions.clear();
     log.calibrations.clear();
     log.sections.clear();
@@ -494,6 +496,20 @@ redo:
                 cal->starts.ParseISOCombined(datestr, ' ');
                 goto redo;
             }
+
+            if (StartsWith(ln, VERSION_PREFIX))
+            {
+                auto pos = VERSION_PREFIX.size();
+                auto end = ln.find(", Log version ", pos);
+                if (end == std::string::npos)
+                {
+                    end = ln.find_first_of(" \t\r\n", pos);
+                    if (end == std::string::npos)
+                        end = ln.size();
+                }
+                log.phd_version = ln.substr(pos, end - pos);
+                // fall through and skip it
+            }
         }
         else if (st == GUIDING_HDR)
         {
@@ -536,7 +552,7 @@ redo:
         }
         else if (st == GUIDING)
         {
-            if (ln.size() == 0 || StartsWith(ln, GUIDING_ENDS))
+            if (IsEmpty(ln) || StartsWith(ln, GUIDING_ENDS))
             {
                 const auto& p = s->entries.rbegin();
                 if (p != s->entries.rend())
@@ -590,7 +606,7 @@ redo:
         }
         else if (st == CALIBRATING)
         {
-            if (ln.size() == 0 || StartsWith(ln, CALIBRATION_ENDS))
+            if (IsEmpty(ln) || StartsWith(ln, CALIBRATION_ENDS))
             {
                 st = SKIP;
                 continue;

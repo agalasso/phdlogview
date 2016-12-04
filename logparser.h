@@ -163,6 +163,7 @@ struct GuideLog
     typedef std::vector<Calibration> CalibrationVec;
     typedef std::vector<LogSectionLoc> SectionLocVec;
 
+    std::string phd_version;
     SessionVec sessions;
     CalibrationVec calibrations;
     SectionLocVec sections;
