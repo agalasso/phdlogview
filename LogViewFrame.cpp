@@ -51,6 +51,13 @@ enum DragMode
     DRAG_INCLUDE,
 };
 
+enum DragDirection
+{
+    DRAGDIR_UNKNOWN,
+    DRAGDIR_HORZ,
+    DRAGDIR_VERT,
+};
+
 struct DragInfo
 {
     bool m_dragging;
@@ -61,7 +68,7 @@ struct DragInfo
     wxPoint m_endPoint;
     bool dragMoved;
 
-    int drag_direction; // 0 = unknown, 1 = horizontal, 2 = vertical
+    DragDirection drag_direction;
     wxPoint m_lastMousePos;
     wxPoint m_mousePos[2];
     wxLongLong_t m_mouseTime[2];
@@ -658,6 +665,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 m_vplus->Enable(enable);
                 m_vminus->Enable(enable);
                 m_vreset->Enable(enable);
+                m_vlock->Enable(enable);
                 m_scrollbar->Enable(enable);
 
                 GetSizer()->Show(m_guideControlsSizer);
@@ -684,6 +692,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 m_vplus->Enable(enable);
                 m_vminus->Enable(enable);
                 m_vreset->Enable(enable);
+                m_vlock->Enable(enable);
                 m_scrollbar->Enable(enable);
 
                 GetSizer()->Hide(m_guideControlsSizer);
@@ -745,7 +754,7 @@ void LogViewFrame::OnLeftDown(wxMouseEvent& event)
     else
     {
         s_drag.m_dragMode = DRAG_PAN;
-        s_drag.drag_direction = 0;
+        s_drag.drag_direction = DRAGDIR_UNKNOWN;
         s_drag.m_lastMousePos = event.GetPosition();
         s_drag.m_mousePos[0] = s_drag.m_mousePos[1] = event.GetPosition();
         s_drag.m_mouseTime[0] = s_drag.m_mouseTime[1] = now(); /*evt.GetTimestamp();*/
@@ -876,19 +885,29 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
             int dy = pos.y - s_drag.m_lastMousePos.y;
             s_drag.m_lastMousePos = pos;
 
-            int prior_direction = s_drag.drag_direction;
-            if (dx == 0)
-                s_drag.drag_direction = 2;
-            else
-                s_drag.drag_direction = 1;
+            bool vlock = m_vlock->GetValue();
 
-            if (prior_direction != s_drag.drag_direction)
+            if (!vlock)
             {
-                event.Skip();
-                return;
+                DragDirection prior_direction = s_drag.drag_direction;
+                if (dx == 0)
+                {
+                    s_drag.drag_direction = DRAGDIR_VERT;
+                }
+                else
+                {
+                    s_drag.drag_direction = DRAGDIR_HORZ;
+                    dy = 0;
+                }
+
+                if (prior_direction != s_drag.drag_direction)
+                {
+                    event.Skip();
+                    return;
+                }
             }
 
-            if (s_drag.drag_direction == 1)
+            if (dx != 0)
             {
                 int newpos = ginfo.xofs - dx;
                 if (newpos < ginfo.xmin)
@@ -910,10 +929,18 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
 
                 UpdateScrollbar();
             }
-            else
+
+            if (dy != 0)
             {
-                ginfo.vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
-                s_scatter.Invalidate();
+                if (vlock)
+                {
+                    ginfo.yofs -= dy;
+                }
+                else
+                {
+                    ginfo.vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
+                    s_scatter.Invalidate();
+                }
             }
 
             m_graph->Refresh();
@@ -1187,7 +1214,8 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     }
     double x0 = (double)i0 * ginfo.hscale - (double)ginfo.xofs;
     int fullw = m_graph->GetSize().GetWidth();
-    int y0 = m_graph->GetSize().GetHeight() / 2;
+    int y00 = m_graph->GetSize().GetHeight() / 2;
+    int y0 = y00 - ginfo.yofs;
     unsigned int cnt = i1 >= i0 ? i1 - i0 + 1 : 0;
     if (s_tmp.size < cnt)
     {
@@ -1237,7 +1265,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
                 dc.DrawText(wxString::Format(format, dy), 3, y + 2);
             }
             dy = -v;
-            for (int y = y0 + iv; y < 2 * y0; y += iv, dy -= v)
+            for (int y = y0 + iv; y < m_graph->GetSize().GetHeight(); y += iv, dy -= v)
             {
                 dc.DrawLine(0, y, fullw, y);
                 dc.DrawText(wxString::Format(format, dy), 3, y + 2);
@@ -1382,7 +1410,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         for (unsigned int i = i0; i <= i1; i++)
         {
             s_tmp.pts[ix].x = (int)x;
-            s_tmp.pts[ix].y = y0 - (int)(entries[i].mass * massscale);
+            s_tmp.pts[ix].y = y00 - (int)(entries[i].mass * massscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1404,7 +1432,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         for (unsigned int i = i0; i <= i1; i++)
         {
             s_tmp.pts[ix].x = (int)x;
-            s_tmp.pts[ix].y = y0 - (int)(entries[i].snr * snrscale);
+            s_tmp.pts[ix].y = y00 - (int)(entries[i].snr * snrscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1636,6 +1664,8 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
         else
             ginfo.vscale = 1.0;
 
+        ginfo.yofs = 0;
+
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
@@ -1643,7 +1673,10 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
 
 void LogViewFrame::OnVLock(wxCommandEvent& event)
 {
-
+    if (m_vlock->GetValue())
+        m_vlock->SetLabel("&P/Z");
+    else
+        m_vlock->SetLabel("P/&Z");
 }
 
 static void Rescale(GuideSession *session, double f, unsigned int width)
@@ -1732,6 +1765,7 @@ void LogViewFrame::OnHReset(wxCommandEvent& event)
         ginfo.hscale = scale;
         ginfo.width = width;
         ginfo.xofs = 0;
+        ginfo.yofs = 0;
         ginfo.xmin = -ginfo.width + MIN_SHOW;
         ginfo.xmax = (int)(ginfo.hscale * m_session->entries.size()) - MIN_SHOW;
         UpdateRange(&ginfo);
@@ -1758,7 +1792,6 @@ void LogViewFrame::OnSizeGraph(wxSizeEvent& event)
         return;
     }
     GraphInfo& ginfo = m_session->m_ginfo;
-    double s0 = ginfo.width;
     ginfo.width = event.GetSize().GetWidth();
     ginfo.hscale = (double)ginfo.width / (ginfo.i1 - ginfo.i0);
     ginfo.xofs = (int)(ginfo.hscale * ginfo.i0);

@@ -85,6 +85,7 @@ struct GraphInfo
     double max_snr;
     int max_mass;
     int xofs;             // view offset relative to 0th entry
+    int yofs;
     int xmin;
     int xmax;
     int width;
