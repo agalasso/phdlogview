@@ -712,6 +712,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
         m_stats->ClearGrid();
     }
 
+    m_rowInfo->Clear();
     s_scatter.Invalidate();
     m_graph->Refresh();
 
