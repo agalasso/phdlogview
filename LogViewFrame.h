@@ -59,4 +59,15 @@ private:
     wxDECLARE_EVENT_TABLE();
 };
 
+class SettingsDialog : public SettingsDialogBase
+{
+public:
+    wxColour m_raColor;
+    wxColour m_decColor;
+
+    SettingsDialog(wxWindow *parent) : SettingsDialogBase(parent) { }
+    void OnRAColor(wxCommandEvent& event);
+    void OnDecColor(wxCommandEvent& event);
+};
+
 #endif // __LogViewFrame__

@@ -2,18 +2,20 @@
 #include "LogViewApp.h"
 #include "logparser.h"
 
-#include <wx/filedlg.h>
-#include <wx/wfstream.h>
-#include <wx/log.h>
-#include <wx/grid.h>
-#include <wx/dcbuffer.h>
-#include <wx/busyinfo.h>
-#include <wx/dnd.h>
-#include <wx/wupdlock.h>
 #include <wx/aboutdlg.h>
+#include <wx/busyinfo.h>
+#include <wx/colordlg.h>
+#include <wx/dcbuffer.h>
+#include <wx/dnd.h>
+#include <wx/filedlg.h>
 #include <wx/graphics.h>
-#include <wx/valnum.h>
+#include <wx/grid.h>
+#include <wx/log.h>
 #include <wx/stopwatch.h>
+#include <wx/textentry.h>
+#include <wx/valnum.h>
+#include <wx/wfstream.h>
+#include <wx/wupdlock.h>
 
 #include <algorithm>
 #include <fstream>
@@ -41,6 +43,8 @@ struct Settings
     bool excludeByServer;
     bool excludeParametric;
     SettleParams settle;
+    wxColor raColor;
+    wxColor decColor;
 };
 static Settings s_settings;
 
@@ -166,6 +170,8 @@ LogViewFrame::LogViewFrame()
     s_settings.excludeParametric = Config->ReadBool("/settle/excludeParametric", false);
     s_settings.settle.pixels = Config->ReadDouble("/settle/pixels", 1.0);
     s_settings.settle.seconds = Config->ReadDouble("/settle/seconds", 10.0);
+    s_settings.raColor = wxColor(Config->Read("/color/ra", wxColor(100, 100, 255).GetAsString(wxC2S_HTML_SYNTAX)));
+    s_settings.decColor = wxColor(Config->Read("/color/dec", wxRED->GetAsString(wxC2S_HTML_SYNTAX)));
 }
 
 static wxString durStr(double dur)
@@ -385,9 +391,30 @@ void LogViewFrame::OnFileOpen(wxCommandEvent& event)
     OpenLog(openFileDialog.GetPath());
 }
 
+static void OnColor(wxWindow *parent, wxButton *btn, wxColor *color)
+{
+    wxColourDialog dlg(parent);
+    dlg.GetColourData().SetColour(*color);
+    if (dlg.ShowModal() == wxID_OK)
+    {
+        *color = dlg.GetColourData().GetColour();
+        btn->SetForegroundColour(*color);
+    }
+}
+
+void SettingsDialog::OnRAColor(wxCommandEvent& event)
+{
+    OnColor(this, m_raColorBtn, &m_raColor);
+}
+
+void SettingsDialog::OnDecColor(wxCommandEvent& event)
+{
+    OnColor(this, m_decColorBtn, &m_decColor);
+}
+
 void LogViewFrame::OnFileSettings(wxCommandEvent& event)
 {
-    SettingsDialogBase dlg(this);
+    SettingsDialog dlg(this);
 
     dlg.m_excludeApi->SetValue(s_settings.excludeByServer);
     dlg.m_excludeByParam->SetValue(s_settings.excludeParametric);
@@ -395,6 +422,10 @@ void LogViewFrame::OnFileSettings(wxCommandEvent& event)
     dlg.m_settlePixels->SetValidator(wxFloatingPointValidator<double>(1, &pixels, 0));
     double seconds = s_settings.settle.seconds;
     dlg.m_settleSeconds->SetValidator(wxFloatingPointValidator<double>(1, &seconds, 0));
+    dlg.m_raColor = s_settings.raColor;
+    dlg.m_decColor = s_settings.decColor;
+    dlg.m_raColorBtn->SetForegroundColour(dlg.m_raColor);
+    dlg.m_decColorBtn->SetForegroundColour(dlg.m_decColor);
 
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
@@ -403,11 +434,18 @@ void LogViewFrame::OnFileSettings(wxCommandEvent& event)
     s_settings.excludeParametric = dlg.m_excludeByParam->GetValue();
     s_settings.settle.pixels = pixels;
     s_settings.settle.seconds = seconds;
+    s_settings.raColor = dlg.m_raColor;
+    s_settings.decColor = dlg.m_decColor;
+
+    // in case color changed
+    m_graph->Refresh();
 
     Config->Write("/settle/excludeByServer", s_settings.excludeByServer);
     Config->Write("/settle/excludeParametric", s_settings.excludeParametric);
     Config->Write("/settle/pixels", s_settings.settle.pixels);
     Config->Write("/settle/seconds", s_settings.settle.seconds);
+    Config->Write("/color/ra", s_settings.raColor.GetAsString(wxC2S_HTML_SYNTAX));
+    Config->Write("/color/dec", s_settings.decColor.GetAsString(wxC2S_HTML_SYNTAX));
 }
 
 void LogViewFrame::OnRightUp(wxMouseEvent& event)
@@ -1144,17 +1182,17 @@ static void PaintCalibration(wxDC& dc, const Calibration *cal, wxWindow *graph)
     {
         switch (p->direction) {
         case WEST:
-            dc.SetPen(wxPen(wxColour(100, 100, 255)));
+            dc.SetPen(wxPen(s_settings.raColor));
             break;
         case EAST:
-            dc.SetPen(wxPen(wxColour(100, 100, 255).ChangeLightness(30)));
+            dc.SetPen(wxPen(s_settings.raColor.ChangeLightness(30)));
             break;
         case NORTH:
-            dc.SetPen(wxPen(wxColour(255, 0, 0)));
+            dc.SetPen(wxPen(s_settings.decColor));
             break;
         case BACKLASH:
         case SOUTH:
-            dc.SetPen(wxPen(wxColour(255, 0, 0).ChangeLightness(30)));
+            dc.SetPen(wxPen(s_settings.decColor.ChangeLightness(30)));
             break;
         }
         dc.DrawCircle(x0 + (int)(p->dx * scale), y0 - (int)(p->dy * scale), 7);
@@ -1167,7 +1205,7 @@ static void PaintCalibration(wxDC& dc, const Calibration *cal, wxWindow *graph)
     {
         const auto& p0 = cal->entries[cal->display.firstWest];
         const auto& p1 = cal->entries[cal->display.lastWest];
-        dc.SetPen(wxPen(wxColour(100, 100, 255), 2));
+        dc.SetPen(wxPen(s_settings.raColor, 2));
         dc.DrawLine(x0 + (int)(p0.dx * scale), y0 - (int)(p0.dy * scale),
             x0 + (int)(p1.dx * scale), y0 - (int)(p1.dy * scale));
     }
@@ -1175,14 +1213,11 @@ static void PaintCalibration(wxDC& dc, const Calibration *cal, wxWindow *graph)
     {
         const auto& p0 = cal->entries[cal->display.firstNorth];
         const auto& p1 = cal->entries[cal->display.lastNorth];
-        dc.SetPen(wxPen(wxColour(255, 0, 0), 2));
+        dc.SetPen(wxPen(s_settings.decColor, 2));
         dc.DrawLine(x0 + (int)(p0.dx * scale), y0 - (int)(p0.dy * scale),
             x0 + (int)(p1.dx * scale), y0 - (int)(p1.dy * scale));
     }
 }
-
-static const wxColour RA_COLOR(100, 100, 255);
-static const wxColour DEC_COLOR(255, 0, 0);
 
 void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 {
@@ -1311,7 +1346,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // max ra (milliseconds) * xRate (px/sec)
                 int y = (int)(m_session->mount.xlim.maxDur * m_session->mount.xRate / 1000.0 * ginfo.vscale);
-                dc.SetPen(wxPen(RA_COLOR, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.raColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1319,7 +1354,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // minMo (pixels)
                 int y = (int)(m_session->mount.xlim.minMo * ginfo.vscale);
-                dc.SetPen(wxPen(RA_COLOR, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.raColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1330,7 +1365,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // max dec (milliseconds) * yRate (px/sec)
                 int y = (int)(m_session->mount.ylim.maxDur * m_session->mount.yRate / 1000.0 * ginfo.vscale);
-                dc.SetPen(wxPen(DEC_COLOR, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.decColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1338,7 +1373,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // minMo (pixels)
                 int y = (int)(m_session->mount.ylim.minMo * ginfo.vscale);
-                dc.SetPen(wxPen(DEC_COLOR, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.decColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1352,7 +1387,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     if (m_corrections->IsChecked() && m_ra->IsChecked() && cwid >= 1)
     {
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
-        dc.SetPen(wxPen(RA_COLOR.ChangeLightness(60)));
+        dc.SetPen(wxPen(s_settings.raColor.ChangeLightness(60)));
 
         double xRate[2];
         xRate[MOUNT] = m_session->mount.xRate / 1000.0; // pixels per millisec
@@ -1377,7 +1412,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     if (m_corrections->IsChecked() && m_dec->IsChecked() && cwid >= 1)
     {
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
-        dc.SetPen(wxPen(DEC_COLOR.ChangeLightness(60)));
+        dc.SetPen(wxPen(s_settings.decColor.ChangeLightness(60)));
 
         double yRate[2];
         yRate[MOUNT] = m_session->mount.yRate / 1000.0; // pixels per millisec
@@ -1457,7 +1492,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             ++ix;
             x += ginfo.hscale;
         }
-        wxPen raOrDxPen(RA_COLOR, ginfo.hscale < 2.0 ? 1 : 2);
+        wxPen raOrDxPen(s_settings.raColor, ginfo.hscale < 2.0 ? 1 : 2);
         dc.SetPen(raOrDxPen);
         dc.DrawLines(ix, s_tmp.pts);
     }
@@ -1476,7 +1511,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             ++ix;
             x += ginfo.hscale;
         }
-        wxPen decOrDyPen(DEC_COLOR, ginfo.hscale < 2.0 ? 1 : 2);
+        wxPen decOrDyPen(s_settings.decColor, ginfo.hscale < 2.0 ? 1 : 2);
         dc.SetPen(decOrDyPen);
         dc.DrawLines(ix, s_tmp.pts);
     }
