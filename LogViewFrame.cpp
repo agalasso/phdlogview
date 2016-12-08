@@ -1398,7 +1398,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         {
             int x = (int) xx;
             const auto& e = entries[i];
-            int height = -(int)(e.radur * xRate[e.mount] * ginfo.vscale);
+            int height = (int)(e.radur * xRate[e.mount] * ginfo.vscale);
             if (height > 0)
                 dc.DrawRectangle(x, y0, cwid, height);
             else if (height < 0)
@@ -1487,7 +1487,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             wxASSERT(ix < s_tmp.size);
             s_tmp.pts[ix].x = (int)x;
             double val = radec ? entries[i].raraw : entries[i].dx;
-            s_tmp.pts[ix].y = y0 - (int)(val * ginfo.vscale);
+            s_tmp.pts[ix].y = y0 + (int)(val * ginfo.vscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1505,8 +1505,8 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         for (unsigned int i = i0; i <= i1; i++)
         {
             s_tmp.pts[ix].x = (int)x;
-            double val = radec ? entries[i].decraw : entries[i].dy;
-            s_tmp.pts[ix].y = y0 - (int)(val * ginfo.vscale);
+            double val = radec ? -entries[i].decraw : entries[i].dy;
+            s_tmp.pts[ix].y = y0 + (int)(val * ginfo.vscale);
 
             ++ix;
             x += ginfo.hscale;
