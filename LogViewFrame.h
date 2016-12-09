@@ -51,6 +51,7 @@ private:
     void OnCaptureLost(wxMouseCaptureLostEvent& evt);
     void OnSizeGraph(wxSizeEvent& event);
     void OnClose(wxCloseEvent& event);
+    void OnKeyDown(wxKeyEvent& event);
 
     void InitGraph();
     void InitCalDisplay();

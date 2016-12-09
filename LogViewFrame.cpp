@@ -147,6 +147,8 @@ LogViewFrame::LogViewFrame()
 
     m_graph->Connect(wxEVT_MOUSE_CAPTURE_LOST, wxMouseCaptureLostEventHandler(LogViewFrame::OnCaptureLost), NULL, this);
 
+    Bind(wxEVT_CHAR_HOOK, &LogViewFrame::OnKeyDown, this);
+
     SetDropTarget(new FileDropTarget(this));
 
     wxString geometry = Config->Read("/geometry", wxEmptyString);
@@ -1874,4 +1876,23 @@ void LogViewFrame::OnClose(wxCloseEvent& event)
         IsMaximized() ? 1 : 0,
         GetSize().x, GetSize().y, GetPosition().x, GetPosition().y));
     event.Skip();
+}
+
+void LogViewFrame::OnKeyDown(wxKeyEvent& event)
+{
+    switch (event.GetKeyCode())
+    {
+    case 'P':
+    case 'Z':
+        if (m_vlock->IsEnabled())
+        {
+            m_vlock->SetValue(!m_vlock->GetValue());
+            wxCommandEvent dummy;
+            OnVLock(dummy);
+            break;
+        }
+    default:
+        event.Skip();
+        break;
+    }
 }
