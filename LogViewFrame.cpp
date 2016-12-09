@@ -421,7 +421,7 @@ void LogViewFrame::OnFileSettings(wxCommandEvent& event)
     dlg.m_excludeApi->SetValue(s_settings.excludeByServer);
     dlg.m_excludeByParam->SetValue(s_settings.excludeParametric);
     double pixels = s_settings.settle.pixels;
-    dlg.m_settlePixels->SetValidator(wxFloatingPointValidator<double>(1, &pixels, 0));
+    dlg.m_settlePixels->SetValidator(wxFloatingPointValidator<double>(2, &pixels, 0));
     double seconds = s_settings.settle.seconds;
     dlg.m_settleSeconds->SetValidator(wxFloatingPointValidator<double>(1, &seconds, 0));
     dlg.m_raColor = s_settings.raColor;
