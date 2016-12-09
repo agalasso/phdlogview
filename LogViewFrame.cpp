@@ -174,6 +174,9 @@ LogViewFrame::LogViewFrame()
     s_settings.settle.seconds = Config->ReadDouble("/settle/seconds", 10.0);
     s_settings.raColor = wxColor(Config->Read("/color/ra", wxColor(100, 100, 255).GetAsString(wxC2S_HTML_SYNTAX)));
     s_settings.decColor = wxColor(Config->Read("/color/dec", wxRED->GetAsString(wxC2S_HTML_SYNTAX)));
+
+    m_raLegend->SetForegroundColour(s_settings.raColor);
+    m_decLegend->SetForegroundColour(s_settings.decColor);
 }
 
 static wxString durStr(double dur)
@@ -441,6 +444,8 @@ void LogViewFrame::OnFileSettings(wxCommandEvent& event)
 
     // in case color changed
     m_graph->Refresh();
+    m_raLegend->SetForegroundColour(s_settings.raColor);
+    m_decLegend->SetForegroundColour(s_settings.decColor);
 
     Config->Write("/settle/excludeByServer", s_settings.excludeByServer);
     Config->Write("/settle/excludeParametric", s_settings.excludeParametric);
@@ -1851,6 +1856,16 @@ void LogViewFrame::OnUnits( wxCommandEvent& event )
 
 void LogViewFrame::OnAxes( wxCommandEvent& event )
 {
+    if (m_axes->GetSelection() == 0)
+    {
+        m_raLegend->ChangeValue(wxT("―RA"));
+        m_decLegend->ChangeValue(wxT("―Dec"));
+    }
+    else
+    {
+        m_raLegend->ChangeValue(wxT("―dx"));
+        m_decLegend->ChangeValue(wxT("―dy"));
+    }
     s_scatter.Invalidate();
     m_graph->Refresh();
 }
