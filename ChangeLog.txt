@@ -1,0 +1,37 @@
+Version 0.5.0 - 8 December 2016
+
+	* Added a button to toggle between pan / zoom for the vertical axis (or use P or Z on the keyboard)
+	* Added a button to lock the vertical scale (use the same vertical scale for all guide sessions)
+	* Added options to make the RA/Dec colors configurable and added a legend for the RA/Dec (or dx/dy) colors
+	* Values from the stats grid can be copied to the clipboard
+	* Allow the Settle Pixels setting to have 2 decimal digits
+	* Vertical orientation is now the same as PHD2's graph
+	* Show the PHD2 version from the log in the window's title bar
+	* Do not leave stale row info displayed when switching sections
+	* Show Saturation in the row info line
+	* Linux: remember the last file open location
+
+Version 0.4.3 - 21 February 2015
+
+	* Allow running on Windows XP
+	* scale scatter plot zoom level along with graph
+
+Version 0.4.2 - 14 February 2015
+
+	* add timestamps to horizontal axis
+
+Version 0.4.1 - 12 February 2015
+
+	* added a scatter plot option
+
+Version 0.4.1 - 11 February 2015
+
+	* more include/exclude options, better panning, resize display for calibration
+
+Version 0.3.2 - 7 February 2015
+
+	* fix hang when resizing the window to a very small size
+	* rescale mass & snr curves when window is resized; better reset scale behavior
+	* File open dialog filters-out files that are not guide logs
+	* added a help screen
+	* control-drag to exclude ranges
