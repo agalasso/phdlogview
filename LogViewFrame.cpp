@@ -146,6 +146,20 @@ static void update_vscale_setting(double vscale)
     Config->Write("/vscale", vscale);
 }
 
+static void InitLegends(bool radec, wxTextCtrl *ra, wxTextCtrl *dec)
+{
+    if (radec)
+    {
+        ra->ChangeValue(wxT("\u2015RA"));
+        dec->ChangeValue(wxT("\u2015Dec"));
+    }
+    else
+    {
+        ra->ChangeValue(wxT("\u2015dx"));
+        dec->ChangeValue(wxT("\u2015dy"));
+    }
+}
+
 LogViewFrame::LogViewFrame()
     :
     LogViewFrameBase(0),
@@ -191,6 +205,8 @@ LogViewFrame::LogViewFrame()
 
     m_raLegend->SetForegroundColour(s_settings.raColor);
     m_decLegend->SetForegroundColour(s_settings.decColor);
+
+    InitLegends(true, m_raLegend, m_decLegend);
 
     m_vlock->SetValue(vscale_locked());
 }
@@ -1917,16 +1933,7 @@ void LogViewFrame::OnUnits( wxCommandEvent& event )
 
 void LogViewFrame::OnAxes( wxCommandEvent& event )
 {
-    if (m_axes->GetSelection() == 0)
-    {
-        m_raLegend->ChangeValue(wxT("―RA"));
-        m_decLegend->ChangeValue(wxT("―Dec"));
-    }
-    else
-    {
-        m_raLegend->ChangeValue(wxT("―dx"));
-        m_decLegend->ChangeValue(wxT("―dy"));
-    }
+    InitLegends(m_axes->GetSelection() == 0, m_raLegend, m_decLegend);
     s_scatter.Invalidate();
     m_graph->Refresh();
 }
