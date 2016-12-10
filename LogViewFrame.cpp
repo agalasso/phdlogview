@@ -4,6 +4,7 @@
 
 #include <wx/aboutdlg.h>
 #include <wx/busyinfo.h>
+#include <wx/clipbrd.h>
 #include <wx/colordlg.h>
 #include <wx/dcbuffer.h>
 #include <wx/dnd.h>
@@ -30,7 +31,7 @@ static GuideLog s_log;
 #define MIN_SHOW 25
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.4.3"
+#define APP_VERSION_STR "0.5.0"
 
 struct SettleParams
 {
@@ -45,6 +46,7 @@ struct Settings
     SettleParams settle;
     wxColor raColor;
     wxColor decColor;
+    double vscale;
 };
 static Settings s_settings;
 
@@ -133,6 +135,17 @@ wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
   EVT_TIMER(ID_TIMER, LogViewFrame::OnTimer)
 wxEND_EVENT_TABLE()
 
+inline static bool vscale_locked()
+{
+    return s_settings.vscale != 0.0;
+}
+
+static void update_vscale_setting(double vscale)
+{
+    s_settings.vscale = vscale;
+    Config->Write("/vscale", vscale);
+}
+
 LogViewFrame::LogViewFrame()
     :
     LogViewFrameBase(0),
@@ -174,9 +187,12 @@ LogViewFrame::LogViewFrame()
     s_settings.settle.seconds = Config->ReadDouble("/settle/seconds", 10.0);
     s_settings.raColor = wxColor(Config->Read("/color/ra", wxColor(100, 100, 255).GetAsString(wxC2S_HTML_SYNTAX)));
     s_settings.decColor = wxColor(Config->Read("/color/dec", wxRED->GetAsString(wxC2S_HTML_SYNTAX)));
+    s_settings.vscale = Config->ReadDouble("/vscale", 0.0);
 
     m_raLegend->SetForegroundColour(s_settings.raColor);
     m_decLegend->SetForegroundColour(s_settings.decColor);
+
+    m_vlock->SetValue(vscale_locked());
 }
 
 static wxString durStr(double dur)
@@ -623,6 +639,7 @@ void LogViewFrame::InitGraph()
     ginfo.max_ofs = mxr;
     ginfo.max_mass = mxmass;
     ginfo.max_snr = mxsnr;
+    ginfo.yofs = 0;
 }
 
 void LogViewFrame::InitCalDisplay()
@@ -710,6 +727,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 m_vplus->Enable(enable);
                 m_vminus->Enable(enable);
                 m_vreset->Enable(enable);
+                m_vpan->Enable(enable);
                 m_vlock->Enable(enable);
                 m_scrollbar->Enable(enable);
 
@@ -723,7 +741,9 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
             {
                 wxCommandEvent dummy;
                 OnHReset(dummy);
-                OnVReset(dummy);
+
+                if (!vscale_locked())
+                    OnVReset(dummy);
             }
             else
                 UpdateScrollbar();
@@ -737,6 +757,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 m_vplus->Enable(enable);
                 m_vminus->Enable(enable);
                 m_vreset->Enable(enable);
+                m_vpan->Enable(enable);
                 m_vlock->Enable(enable);
                 m_scrollbar->Enable(enable);
 
@@ -931,9 +952,9 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
             int dy = pos.y - s_drag.m_lastMousePos.y;
             s_drag.m_lastMousePos = pos;
 
-            bool vlock = m_vlock->GetValue();
+            bool vpan = m_vpan->GetValue();
 
-            if (!vlock)
+            if (!vpan)
             {
                 DragDirection prior_direction = s_drag.drag_direction;
                 if (dx == 0)
@@ -978,13 +999,19 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
 
             if (dy != 0)
             {
-                if (vlock)
+                if (vpan)
                 {
                     ginfo.yofs -= dy;
                 }
                 else
                 {
-                    ginfo.vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
+                    double vscale = vscale_locked() ? s_settings.vscale : ginfo.vscale;
+                    vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
+                    if (vscale_locked())
+                        update_vscale_setting(vscale);
+                    else
+                        ginfo.vscale = vscale;
+
                     s_scatter.Invalidate();
                 }
             }
@@ -1243,6 +1270,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
     const GuideSession::EntryVec& entries = m_session->entries;
     const GraphInfo& ginfo = m_session->m_ginfo;
+    double const vscale = vscale_locked() ? s_settings.vscale : ginfo.vscale;
 
     unsigned int i0, i1;
     if (entries.size())
@@ -1282,11 +1310,11 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     if (m_grid->IsChecked())
     {
         // horizontal grid lines
-        double vscale = ginfo.vscale;
+        double vsc = vscale;
         bool const arcsecs = m_units->GetSelection() == 0;
         if (arcsecs) // arc-seconds
-            vscale /= m_session->pixelScale;
-        double v = (double)m_graph->GetSize().GetHeight() * (0.5 / 6.0) / vscale;
+            vsc /= m_session->pixelScale;
+        double v = (double)m_graph->GetSize().GetHeight() * (0.5 / 6.0) / vsc;
         double m = pow(10, ceil(log10(v)));
         double t;
         if (v < (t = .25 * m))
@@ -1295,7 +1323,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             v = t;
         else
             v = m;
-        int iv = (int)(v * vscale);
+        int iv = (int)(v * vsc);
 
         if (iv > 0)
         {
@@ -1352,7 +1380,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             if (m_session->mount.xlim.maxDur > 0.0)
             {
                 // max ra (milliseconds) * xRate (px/sec)
-                int y = (int)(m_session->mount.xlim.maxDur * m_session->mount.xRate / 1000.0 * ginfo.vscale);
+                int y = (int)(m_session->mount.xlim.maxDur * m_session->mount.xRate / 1000.0 * vscale);
                 dc.SetPen(wxPen(s_settings.raColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
@@ -1360,7 +1388,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             if (m_session->mount.xlim.minMo > 0.0)
             {
                 // minMo (pixels)
-                int y = (int)(m_session->mount.xlim.minMo * ginfo.vscale);
+                int y = (int)(m_session->mount.xlim.minMo * vscale);
                 dc.SetPen(wxPen(s_settings.raColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
@@ -1371,7 +1399,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             if (m_session->mount.ylim.maxDur > 0.0)
             {
                 // max dec (milliseconds) * yRate (px/sec)
-                int y = (int)(m_session->mount.ylim.maxDur * m_session->mount.yRate / 1000.0 * ginfo.vscale);
+                int y = (int)(m_session->mount.ylim.maxDur * m_session->mount.yRate / 1000.0 * vscale);
                 dc.SetPen(wxPen(s_settings.decColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
@@ -1379,7 +1407,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             if (m_session->mount.ylim.minMo > 0.0)
             {
                 // minMo (pixels)
-                int y = (int)(m_session->mount.ylim.minMo * ginfo.vscale);
+                int y = (int)(m_session->mount.ylim.minMo * vscale);
                 dc.SetPen(wxPen(s_settings.decColor, 1, wxDOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
@@ -1405,7 +1433,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         {
             int x = (int) xx;
             const auto& e = entries[i];
-            int height = (int)(e.radur * xRate[e.mount] * ginfo.vscale);
+            int height = (int)(e.radur * xRate[e.mount] * vscale);
             if (height > 0)
                 dc.DrawRectangle(x, y0, cwid, height);
             else if (height < 0)
@@ -1430,7 +1458,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         {
             int x = (int)xx;
             const auto& e = entries[i];
-            int height = -(int)(e.decdur * yRate[e.mount] * ginfo.vscale);
+            int height = -(int)(e.decdur * yRate[e.mount] * vscale);
             if (height > 0)
                 dc.DrawRectangle(x, y0, cwid, height);
             else if (height < 0)
@@ -1494,7 +1522,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             wxASSERT(ix < s_tmp.size);
             s_tmp.pts[ix].x = (int)x;
             double val = radec ? entries[i].raraw : entries[i].dx;
-            s_tmp.pts[ix].y = y0 + (int)(val * ginfo.vscale);
+            s_tmp.pts[ix].y = y0 + (int)(val * vscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1513,7 +1541,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         {
             s_tmp.pts[ix].x = (int)x;
             double val = radec ? -entries[i].decraw : entries[i].dy;
-            s_tmp.pts[ix].y = y0 + (int)(val * ginfo.vscale);
+            s_tmp.pts[ix].y = y0 + (int)(val * vscale);
 
             ++ix;
             x += ginfo.hscale;
@@ -1649,7 +1677,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
             mdc.SetPen(*wxYELLOW_PEN);
 
-            double scale = ginfo.vscale * h * 0.5 / (double)(m_graph->GetSize().GetHeight() / 2 - 10);
+            double scale = vscale * h * 0.5 / (double)(m_graph->GetSize().GetHeight() / 2 - 10);
 
             for (auto it = entries.begin(); it != entries.end(); ++it)
             {
@@ -1679,7 +1707,10 @@ void LogViewFrame::OnVPlus( wxCommandEvent& event )
 {
     if (m_session)
     {
-        m_session->m_ginfo.vscale *= 1.1;
+        if (vscale_locked())
+            update_vscale_setting(s_settings.vscale * 1.1);
+        else
+            m_session->m_ginfo.vscale *= 1.1;
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
@@ -1689,7 +1720,10 @@ void LogViewFrame::OnVMinus( wxCommandEvent& event )
 {
     if (m_session)
     {
-        m_session->m_ginfo.vscale /= 1.1;
+        if (vscale_locked())
+            update_vscale_setting(s_settings.vscale / 1.1);
+        else
+            m_session->m_ginfo.vscale /= 1.1;
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
@@ -1702,10 +1736,16 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
         int height = m_graph->GetSize().GetHeight();
         auto& ginfo = m_session->m_ginfo;
 
+        double vscale;
         if (ginfo.max_ofs > 0.0)
-            ginfo.vscale = (double)(height / 2 - 10) / ginfo.max_ofs;
+            vscale = (double)(height / 2 - 10) / ginfo.max_ofs;
         else
-            ginfo.vscale = 1.0;
+            vscale = 1.0;
+
+        if (vscale_locked())
+            update_vscale_setting(vscale);
+        else
+            ginfo.vscale = vscale;
 
         ginfo.yofs = 0;
 
@@ -1714,12 +1754,33 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
     }
 }
 
+void LogViewFrame::OnVPan(wxCommandEvent& event)
+{
+    if (m_vpan->GetValue())
+        m_vpan->SetLabel("&P/Z");
+    else
+        m_vpan->SetLabel("P/&Z");
+}
+
 void LogViewFrame::OnVLock(wxCommandEvent& event)
 {
     if (m_vlock->GetValue())
-        m_vlock->SetLabel("&P/Z");
+    {
+        update_vscale_setting(m_session->m_ginfo.vscale);
+    }
     else
-        m_vlock->SetLabel("P/&Z");
+    {
+        // set all GuideSession
+        for (auto it = s_log.sections.begin(); it != s_log.sections.end(); ++it)
+        {
+            if (it->type == GUIDING_SECTION)
+            {
+                GuideSession &session = static_cast<GuideSession&>(s_log.sessions[it->idx]);
+                session.m_ginfo.vscale = s_settings.vscale;
+            }
+        }
+        update_vscale_setting(0.0);
+    }
 }
 
 static void Rescale(GuideSession *session, double f, unsigned int width)
@@ -1899,15 +1960,66 @@ void LogViewFrame::OnKeyDown(wxKeyEvent& event)
     {
     case 'P':
     case 'Z':
-        if (m_vlock->IsEnabled())
+        if (m_vpan->IsEnabled())
         {
-            m_vlock->SetValue(!m_vlock->GetValue());
+            m_vpan->SetValue(!m_vpan->GetValue());
             wxCommandEvent dummy;
-            OnVLock(dummy);
+            OnVPan(dummy);
             break;
         }
     default:
         event.Skip();
         break;
     }
+}
+
+static wxString StatsText(const wxGrid *g)
+{
+    int minRow = 99, maxRow = -1, minCol = 99, maxCol = -1;
+    for (int r = 0; r < g->GetNumberRows(); r++)
+        for (int c = 0; c < g->GetNumberCols(); c++)
+            if (g->IsInSelection(r, c))
+            {
+                if (r < minRow) minRow = r;
+                if (r > maxRow) maxRow = r;
+                if (c < minCol) minCol = c;
+                if (c > maxCol) maxCol = c;
+            }
+
+    wxString s;
+
+    for (int r = minRow; r <= maxRow; r++)
+    {
+        if (r > minRow)
+            s += "\n";
+
+        for (int c = minCol; c <= maxCol; c++)
+        {
+            if (c > minCol)
+                s += ",";
+            if (g->IsInSelection(r, c))
+                s += g->GetCellValue(r, c);
+        }
+    }
+
+    return s;
+}
+
+void LogViewFrame::OnStatsChar(wxKeyEvent& event)
+{
+    switch (event.GetKeyCode())
+    {
+    case WXK_CONTROL_A:
+        m_stats->SelectAll();
+        return;
+    case WXK_CONTROL_C:
+        if (wxClipboard::Get()->Open())
+        {
+            wxClipboard::Get()->SetData(new wxTextDataObject(StatsText(m_stats)));
+            wxClipboard::Get()->Close();
+        }
+        return;
+    }
+
+    event.Skip();
 }

@@ -38,7 +38,8 @@ private:
     void OnVPlus(wxCommandEvent& event);
     void OnVMinus(wxCommandEvent& event);
     void OnVReset(wxCommandEvent& event);
-    void OnVLock(wxCommandEvent& event);
+    void OnVPan(wxCommandEvent& event);
+    void OnVLock( wxCommandEvent& event);
     void OnHMinus(wxCommandEvent& event);
     void OnHPlus(wxCommandEvent& event);
     void OnHReset(wxCommandEvent& event);
@@ -52,6 +53,7 @@ private:
     void OnSizeGraph(wxSizeEvent& event);
     void OnClose(wxCloseEvent& event);
     void OnKeyDown(wxKeyEvent& event);
+    void OnStatsChar(wxKeyEvent& event);
 
     void InitGraph();
     void InitCalDisplay();
