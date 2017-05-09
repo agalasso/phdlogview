@@ -98,14 +98,6 @@ inline static void toDouble(const char *s, double *d, double dflt)
     *d = toDouble(s, &t) ? t : dflt;
 }
 
-static std::string rtrim(const std::string& ln)
-{
-    auto end = ln.find_last_not_of(" \r\n\t");
-    if (end != std::string::npos)
-        return ln.substr(0, end + 1);
-    return ln;
-}
-
 static bool ParseEntry(const std::string& ln, GuideEntry& e)
 {
     char buf[256];
@@ -271,7 +263,7 @@ static bool ParseEntry(const std::string& ln, GuideEntry& e)
     s = nstrtok(0, ",");
     if (s && *s)
     {
-        e.info = rtrim(s);
+        e.info = s;
         // chop quotes
         if (e.info.length() >= 2)
             e.info = e.info.substr(1, e.info.length() - 2);
@@ -468,6 +460,13 @@ void GuideSession::CalcStats()
     peak_dec = peak_d;
 }
 
+static void rtrim(std::string& ln)
+{
+    auto end = ln.find_last_not_of(" \r\n\t");
+    if (end != std::string::npos && end + 1 < ln.size())
+        ln = ln.substr(0, end + 1);
+}
+
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
     log.phd_version.clear();
@@ -489,6 +488,8 @@ bool LogParser::Parse(std::istream& is, GuideLog& log)
         ++nr;
         if (nr % 200 == 0)
             wxGetApp().Yield();
+
+        rtrim(ln);
 
 redo:
         if (st == SKIP)
@@ -567,7 +568,7 @@ redo:
                 GetDbl(ln, "Max DEC duration = ", &mnt.ylim.maxDur, 0.0);
             }
 
-            s->hdr.push_back(rtrim(ln));
+            s->hdr.push_back(ln);
         }
         else if (st == GUIDING)
         {
@@ -621,7 +622,7 @@ redo:
                 st = CALIBRATING;
                 continue;
             }
-            cal->hdr.push_back(rtrim(ln));
+            cal->hdr.push_back(ln);
         }
         else if (st == CALIBRATING)
         {
@@ -653,7 +654,7 @@ redo:
             }
             else
             {
-                cal->hdr.push_back(rtrim(ln));
+                cal->hdr.push_back(ln);
             }
         }
     }
