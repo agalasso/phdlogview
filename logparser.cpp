@@ -98,6 +98,14 @@ inline static void toDouble(const char *s, double *d, double dflt)
     *d = toDouble(s, &t) ? t : dflt;
 }
 
+static std::string rtrim(const std::string& ln)
+{
+    auto end = ln.find_last_not_of(" \r\n\t");
+    if (end != std::string::npos)
+        return ln.substr(0, end + 1);
+    return ln;
+}
+
 static bool ParseEntry(const std::string& ln, GuideEntry& e)
 {
     char buf[256];
@@ -263,7 +271,7 @@ static bool ParseEntry(const std::string& ln, GuideEntry& e)
     s = nstrtok(0, ",");
     if (s && *s)
     {
-        e.info = s;
+        e.info = rtrim(s);
         // chop quotes
         if (e.info.length() >= 2)
             e.info = e.info.substr(1, e.info.length() - 2);
@@ -460,14 +468,6 @@ void GuideSession::CalcStats()
     peak_dec = peak_d;
 }
 
-static std::string rtrim(const std::string& ln)
-{
-    auto end = ln.find_last_not_of(" \r\n\t");
-    if (end != std::string::npos)
-        return ln.substr(0, end + 1);
-    return ln;
-}
-
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
     log.phd_version.clear();
@@ -588,7 +588,7 @@ redo:
                 if (!ParseEntry(ln, e))
                     continue;
 
-                if (e.err && e.mass == 0)
+                if (e.err /* && e.mass == 0*/)
                 {
                     e.included = false;
 

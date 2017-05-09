@@ -1646,7 +1646,6 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         const GuideSession::InfoVec& infos = m_session->infos;
         int prev_end = -999999;
         int row = 1;
-        //for (const auto& info : infos)
         for (auto it = infos.begin(); it != infos.end(); ++it)
         {
             const auto& info = *it;
