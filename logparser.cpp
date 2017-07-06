@@ -38,6 +38,7 @@ static std::string CALIBRATION_HEADING("Direction,Step,dx,dy,x,y,Dist");
 static std::string CALIBRATION_ENDS("Calibration complete");
 static std::string XALGO("X guide algorithm = ");
 static std::string YALGO("Y guide algorithm = ");
+static std::string MINMOVE("Minimum move = ");
 
 static char *nstrtok(char *str, const char *delims)
 {
@@ -300,7 +301,7 @@ static void ParseMount(const wxString& ln, Mount& mount)
 
 static void GetMinMo(const wxString& ln, Limits *lim)
 {
-    GetDbl(ln, "Minimum move = ", &lim->minMo, 0.0);
+    GetDbl(ln, MINMOVE, &lim->minMo, 0.0);
 }
 
 static double rms(unsigned int nr, double sx, double sx2)
@@ -478,6 +479,7 @@ bool LogParser::Parse(std::istream& is, GuideLog& log)
     State st = SKIP;
     enum HdrState { GLOBAL, AO, MOUNT, };
     HdrState hdrst;
+    char axis = ' ';
     GuideSession *s = 0;
     Calibration *cal = 0;
     unsigned int nr = 0;
@@ -555,10 +557,19 @@ redo:
             else if (StartsWith(ln, XALGO))
             {
                 GetMinMo(ln, hdrst == MOUNT ? &s->mount.xlim : &s->ao.xlim);
+                axis = 'X';
             }
             else if (StartsWith(ln, YALGO))
             {
                 GetMinMo(ln, hdrst == MOUNT ? &s->mount.ylim : &s->ao.ylim);
+                axis = 'Y';
+            }
+            else if (StartsWith(ln, MINMOVE))
+            {
+                if (axis == 'X')
+                    GetMinMo(ln, hdrst == MOUNT ? &s->mount.xlim : &s->ao.xlim);
+                else if (axis == 'Y')
+                    GetMinMo(ln, hdrst == MOUNT ? &s->mount.ylim : &s->ao.ylim);
             }
             else if (ln.find("Max RA duration = ") != std::string::npos)
             {
