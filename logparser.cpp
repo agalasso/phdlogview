@@ -468,6 +468,18 @@ static void rtrim(std::string& ln)
         ln = ln.substr(0, end + 1);
 }
 
+inline static bool StarWasFound(int err)
+{
+    // reproduces PHD2's function Star::WasFound
+    switch (err) {
+        case 0: // STAR_OK
+        case 1: // STAR_SATURATED
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
     log.phd_version.clear();
@@ -600,7 +612,7 @@ redo:
                 if (!ParseEntry(ln, e))
                     continue;
 
-                if (e.err /* && e.mass == 0*/)
+                if (!StarWasFound(e.err))
                 {
                     e.included = false;
 
