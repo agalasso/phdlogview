@@ -50,7 +50,7 @@ static GuideLog s_log;
 #define MIN_SHOW 25
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.5.0"
+#define APP_VERSION_STR "0.5.1"
 
 struct SettleParams
 {
