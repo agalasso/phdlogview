@@ -1,7 +1,7 @@
 /*
  * This file is part of phdlogview
  *
- * Copyright (C) 2016 Andy Galasso
+ * Copyright (C) 2016-2018 Andy Galasso
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -731,16 +731,34 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
     {
         LogSection *section;
         const LogSectionLoc &loc = s_log.sections[m_sessionIdx];
+        bool enableMount = false;
+        bool enableAO = false;
         if (loc.type == CALIBRATION_SECTION)
         {
             m_session = 0;
             section = m_calibration = &s_log.calibrations[loc.idx];
+            if (m_calibration->device == MOUNT)
+                enableMount = true;
+            else
+                enableAO = true;
         }
         else
         {
             m_calibration = 0;
             section = m_session = &s_log.sessions[loc.idx];
+            if (m_session->mount.isValid)
+                enableMount = true;
+            if (m_session->ao.isValid)
+                enableAO = true;
         }
+
+        m_device->Enable(0, enableMount);
+        m_device->Enable(1, enableAO);
+
+        if (enableMount && !enableAO)
+            m_device->SetSelection(0);
+        else if (enableAO && !enableMount)
+            m_device->SetSelection(1);
 
         {
             wxWindowUpdateLocker lck(m_sessionInfo);
@@ -1453,6 +1471,8 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     // corrections
     int cwid = ((int)ginfo.hscale * .8);
 
+    WhichMount device = m_device->GetSelection() == 0 ? MOUNT : AO;
+
     // ra corrections
     if (m_corrections->IsChecked() && m_ra->IsChecked() && cwid >= 1)
     {
@@ -1468,11 +1488,15 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         {
             int x = (int) xx;
             const auto& e = entries[i];
-            int height = (int)(e.radur * xRate[e.mount] * vscale);
-            if (height > 0)
-                dc.DrawRectangle(x, y0, cwid, height);
-            else if (height < 0)
-                dc.DrawRectangle(x, y0 + height, cwid, -height);
+
+            if (e.mount == device)
+            {
+                int height = (int)(e.radur * xRate[e.mount] * vscale);
+                if (height > 0)
+                    dc.DrawRectangle(x, y0, cwid, height);
+                else if (height < 0)
+                    dc.DrawRectangle(x, y0 + height, cwid, -height);
+            }
 
             xx += ginfo.hscale;
         }
@@ -1491,13 +1515,17 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
         double xx = x0 - 0.2 * ginfo.hscale;
         for (unsigned int i = i0; i <= i1; i++)
         {
-            int x = (int)xx;
+            int x = (int) xx;
             const auto& e = entries[i];
-            int height = -(int)(e.decdur * yRate[e.mount] * vscale);
-            if (height > 0)
-                dc.DrawRectangle(x, y0, cwid, height);
-            else if (height < 0)
-                dc.DrawRectangle(x, y0 + height, cwid, -height);
+
+            if (e.mount == device)
+            {
+                int height = -(int)(e.decdur * yRate[e.mount] * vscale);
+                if (height > 0)
+                    dc.DrawRectangle(x, y0, cwid, height);
+                else if (height < 0)
+                    dc.DrawRectangle(x, y0 + height, cwid, -height);
+            }
 
             xx += ginfo.hscale;
         }
@@ -1942,6 +1970,11 @@ void LogViewFrame::OnSizeGraph(wxSizeEvent& event)
     s_scatter.Invalidate();
     m_graph->Refresh();
     UpdateScrollbar();
+}
+
+void LogViewFrame::OnDevice( wxCommandEvent& event )
+{
+    m_graph->Refresh();
 }
 
 void LogViewFrame::OnUnits( wxCommandEvent& event )

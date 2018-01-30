@@ -86,6 +86,7 @@ struct Limits
 
 struct Mount
 {
+    bool isValid;
     double xRate;
     double yRate;
     double xAngle;
@@ -93,7 +94,7 @@ struct Mount
     Limits xlim;
     Limits ylim;
 
-    Mount() : xRate(1.0), yRate(1.0), xAngle(0.0), yAngle(M_PI_2) { }
+    Mount() : isValid(false), xRate(1.0), yRate(1.0), xAngle(0.0), yAngle(M_PI_2) { }
 };
 
 struct GraphInfo
@@ -161,10 +162,11 @@ struct Calibration : public LogSection
 {
     typedef std::vector<CalibrationEntry> EntryVec;
 
+    WhichMount device;
     EntryVec entries;
     CalDisplay display;
 
-    Calibration(const wxString& dt) : LogSection(dt) { }
+    Calibration(const wxString& dt) : LogSection(dt), device(MOUNT) { }
 };
 
 enum SectionType { CALIBRATION_SECTION, GUIDING_SECTION };

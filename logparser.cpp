@@ -287,6 +287,8 @@ inline static void GetDbl(const wxString& ln, const wxString& key, double *d, do
 
 static void ParseMount(const wxString& ln, Mount& mount)
 {
+    mount.isValid = true;
+
     GetDbl(ln, ", xAngle = ", &mount.xAngle, 0.0);
     GetDbl(ln, ", xRate = ", &mount.xRate, 1.0);
     GetDbl(ln, ", yAngle = ", &mount.yAngle, M_PI_2);
@@ -663,13 +665,25 @@ redo:
             static const std::string LEFT_KEY("Left,");
             static const std::string UP_KEY("Up,");
 
+            bool isCalEntry = false;
+
             if (StartsWith(ln, WEST_KEY) ||
                 StartsWith(ln, EAST_KEY) ||
                 StartsWith(ln, BACKLASH_KEY) ||
                 StartsWith(ln, NORTH_KEY) ||
-                StartsWith(ln, SOUTH_KEY) ||
-                StartsWith(ln, LEFT_KEY) ||
-                StartsWith(ln, UP_KEY))
+                StartsWith(ln, SOUTH_KEY))
+            {
+                isCalEntry = true;
+                cal->device = WhichMount::MOUNT;
+            }
+            else if (StartsWith(ln, LEFT_KEY) ||
+                     StartsWith(ln, UP_KEY))
+            {
+                isCalEntry = true;
+                cal->device = WhichMount::AO;
+            }
+
+            if (isCalEntry)
             {
                 CalibrationEntry e;
                 if (ParseCalibration(ln, e))

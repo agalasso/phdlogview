@@ -62,6 +62,7 @@ private:
     void OnHMinus(wxCommandEvent& event);
     void OnHPlus(wxCommandEvent& event);
     void OnHReset(wxCommandEvent& event);
+    void OnDevice(wxCommandEvent& event);
     void OnUnits(wxCommandEvent& event);
     void OnAxes(wxCommandEvent& event);
     void OnCorrectionsChecked(wxCommandEvent& event);
