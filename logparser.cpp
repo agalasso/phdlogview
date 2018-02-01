@@ -306,14 +306,6 @@ static void GetMinMo(const wxString& ln, Limits *lim)
     GetDbl(ln, MINMOVE, &lim->minMo, 0.0);
 }
 
-static double rms(unsigned int nr, double sx, double sx2)
-{
-    if (nr == 0)
-        return 0.0;
-    double const n = (double) nr;
-    return sqrt(n * sx2 - sx * sx) / n;
-}
-
 inline static bool StartsWith(const std::string& s, const std::string& pfx)
 {
     return s.compare(0, pfx.length(), pfx) == 0;
@@ -430,46 +422,6 @@ static bool ParseCalibration(const std::string& ln, CalibrationEntry& e)
     return true;
 }
 
-void GuideSession::CalcStats()
-{
-    double sum_ra = 0.0;
-    double sum_ra2 = 0.0;
-    double sum_dec = 0.0;
-    double sum_dec2 = 0.0;
-    double peak_r = 0.0;
-    double peak_d = 0.0;
-    int cnt = 0;
-
-    for (auto it = entries.begin(); it != entries.end(); ++it)
-    {
-        const GuideEntry& e = *it;
-        if (e.included)
-        {
-            ++cnt;
-            sum_ra += e.raraw;
-            sum_ra2 += e.raraw * e.raraw;
-            if (fabs(e.raraw) > fabs(peak_r))
-                peak_r = e.raraw;
-            sum_dec += e.decraw;
-            sum_dec2 += e.decraw * e.decraw;
-            if (fabs(e.decraw) > fabs(peak_d))
-                peak_d = e.decraw;
-        }
-    }
-
-    rms_ra = rms(cnt, sum_ra, sum_ra2);
-    rms_dec = rms(cnt, sum_dec, sum_dec2);
-    peak_ra = peak_r;
-    peak_dec = peak_d;
-}
-
-static void rtrim(std::string& ln)
-{
-    auto end = ln.find_last_not_of(" \r\n\t");
-    if (end != std::string::npos && end + 1 < ln.size())
-        ln = ln.substr(0, end + 1);
-}
-
 inline static bool StarWasFound(int err)
 {
     // reproduces PHD2's function Star::WasFound
@@ -480,6 +432,160 @@ inline static bool StarWasFound(int err)
         default:
             return false;
     }
+}
+
+struct LFit
+{
+    double avx, avy, varx, covxy, n;
+    LFit() : avx(0), avy(0), varx(0), covxy(0), n(0) { }
+    void data(double x, double y)
+    {
+        double k = n;
+        n += 1.0;
+        k /= n;
+        double dx = x - avx;
+        double dy = y - avy;
+        varx += (k * dx * dx - varx) / n;
+        covxy += (k * dx * dy - covxy) / n;
+        avx += dx / n;
+        avy += dy / n;
+    }
+    double B() const { return n >= 2. ? covxy / varx : 0.; }
+    double A() const { return avy - B() * avx; }
+};
+
+static double DecDrift(const GuideSession::EntryVec& entries)
+{
+    LFit fit;
+
+    if (entries.size() < 2)
+        return 0.;
+
+    double y_accum = 0.;
+    auto it = entries.begin();
+    double prev_y = it->decraw;
+    bool prev_guided = it->decdur != 0;
+    bool prev_included = it->included;
+    if (StarWasFound(it->err) && it->included)
+        fit.data(it->dt, y_accum);
+    ++it;
+
+    for (; it != entries.end(); ++it)
+    {
+        bool included =  it->included;
+        if (included)
+        {
+            if (!StarWasFound(it->err))
+                continue;
+
+            double y = it->decraw;
+            if (!prev_guided && prev_included)
+            {
+                double dy = y - prev_y;
+                y_accum += dy;
+                fit.data(it->dt, y_accum);
+            }
+            prev_y = y;
+            prev_guided = it->decdur != 0;
+        }
+        prev_included = included;
+    }
+
+    return fit.B();
+}
+
+static double RaDrift(const GuideSession::EntryVec& entries)
+{
+    // estimate RA drift = (RA offset + sum of RA corrections) / time
+
+    double ra0, t0;
+    auto it = entries.begin();
+    for (; it != entries.end(); ++it)
+    {
+        if (it->included)
+        {
+            ra0 = it->raraw;
+            t0 = it->dt;
+            break;
+        }
+    }
+
+    if (it == entries.end())
+        return 0.;
+
+    double sum = 0.;
+    for (; it != entries.end(); ++it)
+    {
+        if (it->included)
+            sum += it->radur ? it->raguide : 0.;
+    }
+
+    double ra1, t1;
+    for (auto itr = entries.rbegin(); itr != entries.rend(); ++itr)
+    {
+        if (itr->included)
+        {
+            ra1 = itr->raraw;
+            t1 = itr->dt;
+            break;
+        }
+    }
+
+    return t1 > t0 ? (ra1 - ra0 - sum) / (t1 - t0) : 0.;
+}
+
+static double PolarAlignError(const GuideSession& session)
+{
+    // polar alignment error from Barrett:
+    // http://celestialwonders.com/articles/polaralignment/PolarAlignmentAccuracy.pdf
+    return 3.8197 * fabs(session.drift_dec) * session.pixelScale / cos(session.declination);
+}
+
+void GuideSession::CalcStats()
+{
+    double n = 0.;
+    double vr = 0., avr = 0., vd = 0., avd = 0.;
+    double peak_r = 0., peak_d = 0.;
+
+    for (auto it = entries.begin(); it != entries.end(); ++it)
+    {
+        const GuideEntry& e = *it;
+        if (e.included)
+        {
+            double k = n;
+            n += 1.0;
+            k /= n;
+
+            double dr = e.raraw - avr;
+            vr += (k * dr * dr - vr) / n;
+            avr += dr / n;
+
+            double dd = e.decraw - avd;
+            vd += (k * dd * dd - vd) / n;
+            avd += dd / n;
+
+            if (fabs(e.raraw) > fabs(peak_r))
+                peak_r = e.raraw;
+            if (fabs(e.decraw) > fabs(peak_d))
+                peak_d = e.decraw;
+        }
+    }
+
+    rms_ra = sqrt(vr);
+    rms_dec = sqrt(vd);
+    peak_ra = peak_r;
+    peak_dec = peak_d;
+
+    drift_ra = RaDrift(entries) * 60.;   // pixels per minute
+    drift_dec = DecDrift(entries) * 60.;
+    paerr = PolarAlignError(*this);
+}
+
+static void rtrim(std::string& ln)
+{
+    auto end = ln.find_last_not_of(" \r\n\t");
+    if (end != std::string::npos && end + 1 < ln.size())
+        ln = ln.substr(0, end + 1);
 }
 
 bool LogParser::Parse(std::istream& is, GuideLog& log)
@@ -591,6 +697,12 @@ redo:
                 Mount& mnt = hdrst == MOUNT ? s->mount : s->ao;
                 GetDbl(ln, "Max RA duration = ", &mnt.xlim.maxDur, 0.0);
                 GetDbl(ln, "Max DEC duration = ", &mnt.ylim.maxDur, 0.0);
+            }
+            else if (StartsWith(ln, "RA = "))
+            {
+                double dec;
+                GetDbl(ln, " hr, Dec = ", &dec, 0.);
+                s->declination = dec * M_PI / 180.;
             }
 
             s->hdr.push_back(ln);

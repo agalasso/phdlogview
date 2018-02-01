@@ -132,6 +132,7 @@ struct GuideSession : public LogSection
 
     double duration;
     double pixelScale;
+    double declination;
     EntryVec entries;
     InfoVec infos;
     Mount ao;
@@ -140,10 +141,13 @@ struct GuideSession : public LogSection
     double rms_dec;
     double peak_ra;
     double peak_dec;
+    double drift_ra;    // pixels per minute
+    double drift_dec;   // pixels per minute
+    double paerr;       // polar alignment error, arc-minutes
 
     GraphInfo m_ginfo;
 
-    GuideSession(const wxString& dt) : LogSection(dt), duration(0.0), pixelScale(1.0), rms_ra(0.0), rms_dec(0.0) { }
+    GuideSession(const wxString& dt) : LogSection(dt), duration(0.), pixelScale(1.), declination(0.), rms_ra(0.), rms_dec(0.), drift_ra(0.), drift_dec(0.) { }
     void CalcStats();
 };
 

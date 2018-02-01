@@ -39,6 +39,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 static GuideLog s_log;
 
@@ -374,6 +376,7 @@ void LogViewFrame::OpenLog(const wxString& filename)
     m_session = 0;
     m_sessionInfo->Clear();
     m_stats->ClearGrid();
+    m_stats2->SetPage(wxEmptyString);
     m_sessions->BeginBatch();
     if (m_sessions->GetNumberRows() > 8)
         m_sessions->DeleteRows(8, m_sessions->GetNumberRows() - 8);
@@ -525,7 +528,14 @@ void LogViewFrame::OnRightUp(wxMouseEvent& event)
     delete menu;
 }
 
-static void InitStats(wxGrid *stats, const GuideSession *session)
+std::string FormatNum(double n)
+{
+    char buf[20];
+    snprintf(buf, sizeof(buf), "%+.2f", n);
+    return buf;
+}
+
+static void InitStats(wxGrid *stats, wxHtmlWindow *stats2, const GuideSession *session)
 {
     stats->BeginBatch();
     stats->SetCellValue(0, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * session->rms_ra, session->rms_ra));
@@ -535,6 +545,20 @@ static void InitStats(wxGrid *stats, const GuideSession *session)
     stats->SetCellValue(0, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
     stats->SetCellValue(1, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
     stats->EndBatch();
+
+    std::ostringstream os;
+    os << "<span style='font-family:monospace;font-size:8;'><table cellspacing=1 cellpadding=1 border=0>"
+            "<tr><td>RA Drift</td><td>" << FormatNum(session->drift_ra * session->pixelScale) << "\"/min, " << FormatNum(session->drift_ra) << " px/min</td></tr>"
+       <<  "<tr><td>Dec Drift</td><td>" << FormatNum(session->drift_dec * session->pixelScale) << "\"/min, " << FormatNum(session->drift_dec) << " px/min</td></tr>"
+       <<  "<tr><td>Polar Alignment Error  </td><td>" << std::fixed << std::setprecision(1) << session->paerr << "'</td></tr>"
+       << "</table></span>";
+    stats2->SetPage(os.str());
+}
+
+static void UpdateStats(wxGrid *stats, wxHtmlWindow *stats2, GuideSession *session)
+{
+    session->CalcStats();
+    InitStats(stats, stats2, session);
 }
 
 void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
@@ -545,24 +569,21 @@ void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
     if (event.GetId() == ID_INCLUDE_ALL)
     {
         IncludeAll(m_session->entries);
-        m_session->CalcStats();
-        InitStats(m_stats, m_session);
+        UpdateStats(m_stats, m_stats2, m_session);
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
     else if (event.GetId() == ID_INCLUDE_NONE)
     {
         IncludeNone(m_session->entries);
-        m_session->CalcStats();
-        InitStats(m_stats, m_session);
+        UpdateStats(m_stats, m_stats2, m_session);
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
     else if (event.GetId() == ID_EXCLUDE_SETTLE)
     {
         ExcludeSettling(m_session);
-        m_session->CalcStats();
-        InitStats(m_stats, m_session);
+        UpdateStats(m_stats, m_stats2, m_session);
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
@@ -788,7 +809,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 Layout();
             }
 
-            InitStats(m_stats, m_session);
+            InitStats(m_stats, m_stats2, m_session);
 
             if (first)
             {
@@ -941,8 +962,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
                         entries[j].included = include;
                     s_scatter.Invalidate();
                     m_graph->Refresh();
-                    m_session->CalcStats();
-                    InitStats(m_stats, m_session);
+                    UpdateStats(m_stats, m_stats2, m_session);
                 }
             }
             else
@@ -966,8 +986,7 @@ void LogViewFrame::OnLeftUp( wxMouseEvent& event )
                     }
                     s_scatter.Invalidate();
                     m_graph->Refresh();
-                    m_session->CalcStats();
-                    InitStats(m_stats, m_session);
+                    UpdateStats(m_stats, m_stats2, m_session);
                 }
             }
         }
