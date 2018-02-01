@@ -531,6 +531,9 @@ void LogViewFrame::OnRightUp(wxMouseEvent& event)
 std::string FormatNum(double n)
 {
     char buf[20];
+#ifdef _MSC_VER
+# define snprintf _snprintf
+#endif
     snprintf(buf, sizeof(buf), "%+.2f", n);
     return buf;
 }
