@@ -173,28 +173,6 @@ elseif(UNIX)
   add_executable(phdlogview ${ALL_SRC})
 endif()
 
-# ===== GSL =====
-if(WIN32)
-  set(gsl_ver "2.4.0.8788")
-  set(gsl_dir ${CMAKE_BINARY_DIR}/gsl-msvc-x86.${gsl_ver})
-  if(NOT EXISTS ${gsl_dir})
-    execute_process(
-      COMMAND ${CMAKE_COMMAND} -E tar xf ${CMAKE_SOURCE_DIR}/3rdparty/gsl-msvc-x86.${gsl_ver}.zip --format=zip
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-  endif()
-  add_definitions(-DGSL_DLL)
-  include_directories(${gsl_dir}/build/native)
-#  set(gsl_lib_dir ${gsl_dir}/build/native/dll/Win32/${CMAKE_BUILD_TYPE})  # requies vcruntime140d.dll
-  set(gsl_lib_dir ${gsl_dir}/build/native/dll/Win32/Release)
-  set(APP_LINK_EXTERNAL ${APP_LINK_EXTERNAL} ${gsl_lib_dir}/gsl.lib)
-  add_custom_command(TARGET phdlogview POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${gsl_lib_dir}/gsl.dll" "${gsl_lib_dir}/cblas.dll" $<TARGET_FILE_DIR:phdlogview>)
-else()
-  find_package(GSL REQUIRED)
-  target_link_libraries(phdlogview GSL::gsl GSL::gslcblas)
-endif()
-
 target_compile_definitions( phdlogview PRIVATE "${wxWidgets_DEFINITIONS}" "HAVE_TYPE_TRAITS")
 target_compile_options(     phdlogview PRIVATE "${wxWidgets_CXX_FLAGS};")
 target_link_libraries(phdlogview ${APP_LINK_EXTERNAL})
