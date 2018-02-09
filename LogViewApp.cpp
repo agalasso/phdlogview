@@ -20,9 +20,17 @@
 #include "LogViewApp.h"
 #include "LogViewFrame.h"
 
+#include <gsl/gsl_errno.h>
 #include <wx/cmdline.h>
 
 wxConfigBase *Config = 0;
+
+static void gsl_error_handler(const char *reason, const char *file, int line, int gsl_errno)
+{
+#if defined(_MSC_VER)
+    DebugBreak();
+#endif
+}
 
 LogViewApp::LogViewApp()
     :
@@ -45,6 +53,8 @@ bool LogViewApp::OnInit()
 
     if (!m_openFile.IsEmpty())
         m_frame->OpenLog(m_openFile);
+
+    gsl_set_error_handler(&gsl_error_handler);
 
     return true;
 }

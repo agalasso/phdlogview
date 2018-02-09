@@ -1,7 +1,7 @@
 /*
  * This file is part of phdlogview
  *
- * Copyright (C) 2016 Andy Galasso
+ * Copyright (C) 2016-2018 Andy Galasso
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ struct GuideEntry
     float dt;
     WhichMount mount;
     bool included;
+    bool guiding;
     float dx;
     float dy;
     float raraw;
@@ -51,6 +52,18 @@ struct GuideEntry
     int err;
     wxString info;
 };
+
+inline static bool StarWasFound(int err)
+{
+    // reproduces PHD2's function Star::WasFound
+    switch (err) {
+        case 0: // STAR_OK
+        case 1: // STAR_SATURATED
+            return true;
+        default:
+            return false;
+    }
+}
 
 struct InfoEntry
 {
@@ -137,6 +150,8 @@ struct GuideSession : public LogSection
     InfoVec infos;
     Mount ao;
     Mount mount;
+
+    // computed stats
     double rms_ra;
     double rms_dec;
     double peak_ra;

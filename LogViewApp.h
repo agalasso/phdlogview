@@ -34,6 +34,7 @@ class LogViewApp : public wxApp
 
 public:
     LogViewApp();
+    LogViewFrame *LVFrame() const { return m_frame; }
 
 private:
     bool OnInit();

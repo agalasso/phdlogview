@@ -1,7 +1,7 @@
 /*
  * This file is part of phdlogview
  *
- * Copyright (C) 2016 Andy Galasso
+ * Copyright (C) 2016-2018 Andy Galasso
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -422,165 +422,6 @@ static bool ParseCalibration(const std::string& ln, CalibrationEntry& e)
     return true;
 }
 
-inline static bool StarWasFound(int err)
-{
-    // reproduces PHD2's function Star::WasFound
-    switch (err) {
-        case 0: // STAR_OK
-        case 1: // STAR_SATURATED
-            return true;
-        default:
-            return false;
-    }
-}
-
-struct LFit
-{
-    double avx, avy, varx, covxy, n;
-    LFit() : avx(0), avy(0), varx(0), covxy(0), n(0) { }
-    void data(double x, double y)
-    {
-        double k = n;
-        n += 1.0;
-        k /= n;
-        double dx = x - avx;
-        double dy = y - avy;
-        varx += (k * dx * dx - varx) / n;
-        covxy += (k * dx * dy - covxy) / n;
-        avx += dx / n;
-        avy += dy / n;
-    }
-    double B() const { return n >= 2. ? covxy / varx : 0.; }
-    double A() const { return avy - B() * avx; }
-};
-
-static double DecDrift(const GuideSession::EntryVec& entries)
-{
-    LFit fit;
-
-    if (entries.size() < 2)
-        return 0.;
-
-    double y_accum = 0.;
-    auto it = entries.begin();
-    double prev_y = it->decraw;
-    bool prev_guided = it->decdur != 0;
-    bool prev_included = it->included;
-    if (StarWasFound(it->err) && it->included)
-        fit.data(it->dt, y_accum);
-    ++it;
-
-    for (; it != entries.end(); ++it)
-    {
-        bool included =  it->included;
-        if (included)
-        {
-            if (!StarWasFound(it->err))
-                continue;
-
-            double y = it->decraw;
-            if (!prev_guided && prev_included)
-            {
-                double dy = y - prev_y;
-                y_accum += dy;
-                fit.data(it->dt, y_accum);
-            }
-            prev_y = y;
-            prev_guided = it->decdur != 0;
-        }
-        prev_included = included;
-    }
-
-    return fit.B();
-}
-
-static double RaDrift(const GuideSession::EntryVec& entries)
-{
-    // estimate RA drift = (RA offset + sum of RA corrections) / time
-
-    double ra0, t0;
-    auto it = entries.begin();
-    for (; it != entries.end(); ++it)
-    {
-        if (it->included)
-        {
-            ra0 = it->raraw;
-            t0 = it->dt;
-            break;
-        }
-    }
-
-    if (it == entries.end())
-        return 0.;
-
-    double sum = 0.;
-    for (; it != entries.end(); ++it)
-    {
-        if (it->included)
-            sum += it->radur ? it->raguide : 0.;
-    }
-
-    double ra1, t1;
-    for (auto itr = entries.rbegin(); itr != entries.rend(); ++itr)
-    {
-        if (itr->included)
-        {
-            ra1 = itr->raraw;
-            t1 = itr->dt;
-            break;
-        }
-    }
-
-    return t1 > t0 ? (ra1 - ra0 - sum) / (t1 - t0) : 0.;
-}
-
-static double PolarAlignError(const GuideSession& session)
-{
-    // polar alignment error from Barrett:
-    // http://celestialwonders.com/articles/polaralignment/PolarAlignmentAccuracy.pdf
-    return 3.8197 * fabs(session.drift_dec) * session.pixelScale / cos(session.declination);
-}
-
-void GuideSession::CalcStats()
-{
-    double n = 0.;
-    double vr = 0., avr = 0., vd = 0., avd = 0.;
-    double peak_r = 0., peak_d = 0.;
-
-    for (auto it = entries.begin(); it != entries.end(); ++it)
-    {
-        const GuideEntry& e = *it;
-        if (e.included)
-        {
-            double k = n;
-            n += 1.0;
-            k /= n;
-
-            double dr = e.raraw - avr;
-            vr += (k * dr * dr - vr) / n;
-            avr += dr / n;
-
-            double dd = e.decraw - avd;
-            vd += (k * dd * dd - vd) / n;
-            avd += dd / n;
-
-            if (fabs(e.raraw) > fabs(peak_r))
-                peak_r = e.raraw;
-            if (fabs(e.decraw) > fabs(peak_d))
-                peak_d = e.decraw;
-        }
-    }
-
-    rms_ra = sqrt(vr);
-    rms_dec = sqrt(vd);
-    peak_ra = peak_r;
-    peak_dec = peak_d;
-
-    drift_ra = RaDrift(entries) * 60.;   // pixels per minute
-    drift_dec = DecDrift(entries) * 60.;
-    paerr = PolarAlignError(*this);
-}
-
 static void rtrim(std::string& ln)
 {
     auto end = ln.find_last_not_of(" \r\n\t");
@@ -603,6 +444,7 @@ bool LogParser::Parse(std::istream& is, GuideLog& log)
     GuideSession *s = 0;
     Calibration *cal = 0;
     unsigned int nr = 0;
+    bool mount_enabled = false;
 
     std::string ln;
     while (std::getline(is, ln))
@@ -620,6 +462,7 @@ redo:
             {
                 st = GUIDING_HDR;
                 hdrst = GLOBAL;
+                mount_enabled = false;
                 std::string datestr = ln.substr(GUIDING_BEGINS.length());
                 log.sessions.push_back(GuideSession(datestr));
                 log.sections.push_back(LogSectionLoc(GUIDING_SECTION, log.sessions.size() - 1));
@@ -664,6 +507,7 @@ redo:
             {
                 ParseMount(ln, s->mount);
                 hdrst = MOUNT;
+                mount_enabled = ln.find(", guiding enabled, ") != wxString::npos;
             }
             else if (StartsWith(ln, AO_KEY))
             {
@@ -743,6 +587,8 @@ redo:
                     e.included = true;
                 }
 
+                e.guiding = mount_enabled;
+
                 s->entries.push_back(e);
                 continue;
             }
@@ -750,6 +596,10 @@ redo:
             if (StartsWith(ln, INFO_KEY))
             {
                 ParseInfo(ln, s);
+
+                size_t pos = ln.find("MountGuidingEnabled = ");
+                if (pos != std::string::npos)
+                    mount_enabled = ln.compare(pos + 22, 4, "true") == 0;
             }
         }
         else if (st == CAL_HDR)

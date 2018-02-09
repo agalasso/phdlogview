@@ -19,6 +19,7 @@
 
 #include "LogViewFrame.h"
 #include "LogViewApp.h"
+#include "AnalysisWin.h"
 #include "logparser.h"
 
 #include <wx/aboutdlg.h>
@@ -40,9 +41,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
+#include <math.h>
 #include <sstream>
-
-static GuideLog s_log;
 
 #define MAX_HSCALE_GUIDE 100.0
 #define MIN_HSCALE_GUIDE 0.1
@@ -54,35 +54,16 @@ static GuideLog s_log;
 #define APP_NAME "PHD2 Log Viewer"
 #define APP_VERSION_STR "0.5.1"
 
-struct SettleParams
-{
-    double pixels;
-    double seconds;
-};
+PointArray s_tmp;
+Settings s_settings;
 
-struct Settings
-{
-    bool excludeByServer;
-    bool excludeParametric;
-    SettleParams settle;
-    wxColor raColor;
-    wxColor decColor;
-    double vscale;
-};
-static Settings s_settings;
+static GuideLog s_log;
 
 enum DragMode
 {
     DRAG_PAN,
     DRAG_EXCLUDE,
     DRAG_INCLUDE,
-};
-
-enum DragDirection
-{
-    DRAGDIR_UNKNOWN,
-    DRAGDIR_HORZ,
-    DRAGDIR_VERT,
 };
 
 struct DragInfo
@@ -104,14 +85,7 @@ struct DragInfo
 };
 static DragInfo s_drag;
 
-struct PointArray
-{
-    wxPoint *pts;
-    unsigned int size;
-    PointArray() : pts(0), size(0) { }
-    ~PointArray() { delete[] pts; }
-};
-static PointArray s_tmp;
+static int s_analyze_pos;
 
 struct ScatterPlot
 {
@@ -143,6 +117,8 @@ enum
     ID_INCLUDE_ALL,
     ID_INCLUDE_NONE,
     ID_EXCLUDE_SETTLE,
+    ID_ANALYZE_GA,
+    ID_ANALYZE_ALL,
 };
 
 wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
@@ -152,6 +128,8 @@ wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
   EVT_MENU(wxID_HELP, LogViewFrame::OnHelp)
   EVT_MENU(wxID_ABOUT, LogViewFrame::OnHelpAbout)
   EVT_MENU_RANGE(ID_INCLUDE_ALL, ID_EXCLUDE_SETTLE, LogViewFrame::OnMenuInclude)
+  EVT_MENU(ID_ANALYZE_GA, LogViewFrame::OnMenuAnalyzeGA)
+  EVT_MENU(ID_ANALYZE_ALL, LogViewFrame::OnMenuAnalyzeAll)
   EVT_MOUSEWHEEL(LogViewFrame::OnMouseWheel)
   EVT_TIMER(ID_TIMER, LogViewFrame::OnTimer)
 wxEND_EVENT_TABLE()
@@ -181,13 +159,40 @@ static void InitLegends(bool radec, wxTextCtrl *ra, wxTextCtrl *dec)
     }
 }
 
+void SaveGeometry(const wxFrame *win, const wxString& key)
+{
+    Config->Write(key, wxString::Format("%d;%d;%d;%d;%d",
+                                        win->IsMaximized() ? 1 : 0,
+                                        win->GetSize().x, win->GetSize().y,
+                                        win->GetPosition().x, win->GetPosition().y));
+}
+
+void LoadGeometry(wxFrame *win, const wxString& key)
+{
+    wxString geometry = Config->Read(key, wxEmptyString);
+    if (!geometry.IsEmpty())
+    {
+        wxArrayString f = wxSplit(geometry, ';');
+        if (f[0] == "1")
+            win->Maximize();
+        long w, h, x, y;
+        f[1].ToLong(&w);
+        f[2].ToLong(&h);
+        f[3].ToLong(&x);
+        f[4].ToLong(&y);
+        win->SetSize(w, h);
+        win->SetPosition(wxPoint(x, y));
+    }
+}
+
 LogViewFrame::LogViewFrame()
     :
     LogViewFrameBase(0),
     m_sessionIdx(-1),
-    m_session(0),
-    m_calibration(0),
-    m_timer(this, ID_TIMER)
+    m_session(nullptr),
+    m_calibration(nullptr),
+    m_timer(this, ID_TIMER),
+    m_analysisWin(nullptr)
 {
     SetTitle(APP_NAME);
 
@@ -199,22 +204,7 @@ LogViewFrame::LogViewFrame()
 
     SetDropTarget(new FileDropTarget(this));
 
-    wxString geometry = Config->Read("/geometry", wxEmptyString);
-    if (!geometry.IsEmpty())
-    {
-        wxArrayString f = wxSplit(geometry, ';');
-        if (f[0] == "1")
-            Maximize();
-        else {
-            long w, h, x, y;
-            f[1].ToLong(&w);
-            f[2].ToLong(&h);
-            f[3].ToLong(&x);
-            f[4].ToLong(&y);
-            SetSize(w, h);
-            SetPosition(wxPoint(x, y));
-        }
-    }
+    LoadGeometry(this, "/geometry");
 
     s_settings.excludeByServer = Config->ReadBool("/settle/excludeByServer", true);
     s_settings.excludeParametric = Config->ReadBool("/settle/excludeParametric", false);
@@ -230,6 +220,12 @@ LogViewFrame::LogViewFrame()
     InitLegends(true, m_raLegend, m_decLegend);
 
     m_vlock->SetValue(vscale_locked());
+}
+
+LogViewFrame::~LogViewFrame()
+{
+    if (m_analysisWin)
+        m_analysisWin->Destroy();
 }
 
 static wxString durStr(double dur)
@@ -361,12 +357,16 @@ static void ExcludeSettling(GuideSession *session)
 
 void LogViewFrame::OpenLog(const wxString& filename)
 {
+    m_filename.clear();
+
     std::ifstream ifs(filename.fn_str());
     if (!ifs.good())
     {
         wxLogError("Cannot open file '%s'.", filename);
         return;
     }
+
+    m_filename = filename;
 
     wxFileName fn(filename);
     SetTitle(wxString::Format(APP_NAME " - %s", fn.GetFullName()));
@@ -509,6 +509,11 @@ void LogViewFrame::OnFileSettings(wxCommandEvent& event)
     Config->Write("/color/dec", s_settings.decColor.GetAsString(wxC2S_HTML_SYNTAX));
 }
 
+inline static int IdxFromScreen(const GraphInfo& ginfo, wxCoord x)
+{
+    return (int)(ginfo.i0 + 0.5 + x / ginfo.hscale);
+}
+
 void LogViewFrame::OnRightUp(wxMouseEvent& event)
 {
     if (!m_session)
@@ -522,6 +527,26 @@ void LogViewFrame::OnRightUp(wxMouseEvent& event)
     menu->Append(ID_INCLUDE_ALL, _("Include all frames"));
     menu->Append(ID_INCLUDE_NONE, _("Exclude all frames"));
     menu->Append(ID_EXCLUDE_SETTLE, _("Exclude frames settling"));
+    menu->AppendSeparator();
+
+    wxMenuItem *mi = menu->Append(ID_ANALYZE_ALL, _("Analyze selected frames"));
+    if (!AnalysisWin::CanAnalyzeAll(*m_session))
+        mi->Enable(false);
+
+    mi = menu->Append(ID_ANALYZE_GA, _("Analyze unguided section"));
+
+    {
+        GraphInfo& ginfo = m_session->m_ginfo;
+        int i = IdxFromScreen(ginfo, event.GetPosition().x);
+        if (i >= 0 && AnalysisWin::CanAnalyzeGA(*m_session, i))
+        {
+            s_analyze_pos = i;
+        }
+        else
+        {
+            mi->Enable(false);
+        }
+    }
 
     PopupMenu(menu, m_graph->GetPosition() + event.GetPosition());
 
@@ -590,6 +615,38 @@ void LogViewFrame::OnMenuInclude(wxCommandEvent& event)
         s_scatter.Invalidate();
         m_graph->Refresh();
     }
+}
+
+void LogViewFrame::OnMenuAnalyzeGA(wxCommandEvent& event)
+{
+    if (!m_analysisWin)
+        m_analysisWin = new AnalysisWin(this);
+
+    m_analysisWin->AnalyzeGA(*m_session, s_analyze_pos);
+
+    if (m_analysisWin->IsShown())
+    {
+        m_analysisWin->m_graph->Refresh();
+        m_analysisWin->Raise();
+    }
+    else
+        m_analysisWin->Show();
+}
+
+void LogViewFrame::OnMenuAnalyzeAll(wxCommandEvent& event)
+{
+    if (!m_analysisWin)
+        m_analysisWin = new AnalysisWin(this);
+
+    m_analysisWin->AnalyzeAll(*m_session);
+
+    if (m_analysisWin->IsShown())
+    {
+        m_analysisWin->m_graph->Refresh();
+        m_analysisWin->Raise();
+    }
+    else
+        m_analysisWin->Show();
 }
 
 void LogViewFrame::OnHelpAbout(wxCommandEvent& event)
@@ -868,11 +925,6 @@ inline static wxLongLong_t now()
     return ::wxGetUTCTimeMillis().GetValue();
 }
 
-inline static int IdxFromScreen(const GraphInfo& ginfo, wxCoord x)
-{
-    return (int)(ginfo.i0 + 0.5 + x / ginfo.hscale);
-}
-
 void LogViewFrame::OnLeftDown(wxMouseEvent& event)
 {
     if (!m_session && !m_calibration)
@@ -912,7 +964,7 @@ void LogViewFrame::OnLeftDown(wxMouseEvent& event)
     event.Skip();
 }
 
-void LogViewFrame::OnLeftUp( wxMouseEvent& event )
+void LogViewFrame::OnLeftUp(wxMouseEvent& event)
 {
     if (!s_drag.m_dragging)
     {
@@ -1222,7 +1274,7 @@ void LogViewFrame::OnScroll(wxScrollEvent& event)
     event.Skip();
 }
 
-void LogViewFrame::OnMouseWheel( wxMouseEvent& evt )
+void LogViewFrame::OnMouseWheel(wxMouseEvent& evt)
 {
     if (evt.GetWheelAxis() == wxMOUSE_WHEEL_VERTICAL)
     {
@@ -1363,12 +1415,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     int y00 = m_graph->GetSize().GetHeight() / 2;
     int y0 = y00 - ginfo.yofs;
     unsigned int cnt = i1 >= i0 ? i1 - i0 + 1 : 0;
-    if (s_tmp.size < cnt)
-    {
-        delete[] s_tmp.pts;
-        s_tmp.pts = new wxPoint[cnt];
-        s_tmp.size = cnt;
-    }
+    s_tmp.alloc(cnt);
 
     bool const radec = m_axes->GetSelection() == 0;
 
@@ -1498,6 +1545,15 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     // ra corrections
     if (m_corrections->IsChecked() && m_ra->IsChecked() && cwid >= 1)
     {
+        wxString lblE(_("GuideEast"));
+        static wxSize szE;
+        if (szE.x == 0)
+            szE = dc.GetTextExtent(lblE);
+        wxColor prev = dc.GetTextForeground();
+        dc.SetTextForeground(s_settings.raColor.ChangeLightness(75));
+        dc.DrawText(lblE, fullw - szE.GetWidth() - 4, m_graph->GetSize().GetHeight() - 2 * szE.GetHeight() - 2);
+        dc.SetTextForeground(prev);
+
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
         dc.SetPen(wxPen(s_settings.raColor.ChangeLightness(60)));
 
@@ -1527,6 +1583,15 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
     // dec corrections
     if (m_corrections->IsChecked() && m_dec->IsChecked() && cwid >= 1)
     {
+        wxString lblN(_("GuideNorth"));
+        static wxSize szN;
+        if (szN.x == 0)
+            szN = dc.GetTextExtent(lblN);
+        wxColor prev = dc.GetTextForeground();
+        dc.SetTextForeground(s_settings.decColor.ChangeLightness(75));
+        dc.DrawText(lblN, fullw - szN.GetWidth() - 4, 0 /*topEdge*/ + szN.GetHeight() + 2);
+        dc.SetTextForeground(prev);
+
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
         dc.SetPen(wxPen(s_settings.decColor.ChangeLightness(60)));
 
@@ -2002,6 +2067,9 @@ void LogViewFrame::OnDevice( wxCommandEvent& event )
 void LogViewFrame::OnUnits( wxCommandEvent& event )
 {
     m_graph->Refresh();
+
+    if (m_analysisWin)
+        m_analysisWin->RefreshGraph();
 }
 
 void LogViewFrame::OnAxes( wxCommandEvent& event )
@@ -2028,9 +2096,9 @@ void LogViewFrame::OnRAChecked( wxCommandEvent& event )
 
 void LogViewFrame::OnClose(wxCloseEvent& event)
 {
-    Config->Write("/geometry", wxString::Format("%d;%d;%d;%d;%d",
-        IsMaximized() ? 1 : 0,
-        GetSize().x, GetSize().y, GetPosition().x, GetPosition().y));
+    if (m_analysisWin)
+        m_analysisWin->Close(true);
+    SaveGeometry(this, "/geometry");
     event.Skip();
 }
 
@@ -2102,4 +2170,21 @@ void LogViewFrame::OnStatsChar(wxKeyEvent& event)
     }
 
     event.Skip();
+}
+
+static void _shell_open(const wxString& loc)
+{
+#if defined(__WXMSW__)
+    ::ShellExecute(NULL, _T("open"), loc.fn_str(), NULL, NULL, SW_SHOWNORMAL);
+#elif defined(__WXOSX__)
+    ::wxExecute("/usr/bin/open '" + loc + "'", wxEXEC_ASYNC);
+#else
+    ::wxExecute("xdg-open '" + loc + "'", wxEXEC_ASYNC);
+#endif
+}
+
+void LogViewFrame::OnLaunchEditor(wxCommandEvent& event)
+{
+    if (!m_filename.empty())
+        _shell_open(m_filename);
 }

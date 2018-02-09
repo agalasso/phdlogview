@@ -130,6 +130,8 @@ endif()
 set(APP_LINK_EXTERNAL ${APP_LINK_EXTERNAL} ${wxWidgets_LIBRARIES})
 
 set(SRC
+  ${srcdir}/AnalysisWin.cpp
+  ${srcdir}/AnalysisWin.h
   ${srcdir}/LogViewApp.cpp
   ${srcdir}/LogViewApp.h
   ${srcdir}/LogViewFrame.cpp

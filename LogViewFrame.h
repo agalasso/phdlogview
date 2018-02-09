@@ -1,7 +1,7 @@
 /*
  * This file is part of phdlogview
  *
- * Copyright (C) 2016 Andy Galasso
+ * Copyright (C) 2016-2018 Andy Galasso
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,19 +24,33 @@
 
 #include <wx/timer.h>
 
+class AnalysisWin;
 struct GuideSession;
 struct Calibration;
 
+enum DragDirection
+{
+    DRAGDIR_UNKNOWN,
+    DRAGDIR_HORZ,
+    DRAGDIR_VERT,
+};
+
 class LogViewFrame : public LogViewFrameBase
 {
+    wxString m_filename;
     int m_sessionIdx;
     GuideSession *m_session;
     Calibration *m_calibration;
     wxTimer m_timer;
 
 public:
+    AnalysisWin *m_analysisWin;
+
+public:
     LogViewFrame();
+    ~LogViewFrame();
     void OpenLog(const wxString& filename);
+    bool ArcsecsSelected() const;
 
 private:
     void OnFileOpen(wxCommandEvent& event);
@@ -45,6 +59,8 @@ private:
     void OnHelp(wxCommandEvent& event);
     void OnHelpAbout(wxCommandEvent& event);
     void OnMenuInclude(wxCommandEvent& event);
+    void OnMenuAnalyzeGA(wxCommandEvent& event);
+    void OnMenuAnalyzeAll(wxCommandEvent& event);
     // Handlers for LogViewFrameBase events.
     void OnCellSelected(wxGridEvent& event);
     void OnLeftDown(wxMouseEvent& event);
@@ -74,6 +90,7 @@ private:
     void OnClose(wxCloseEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnStatsChar(wxKeyEvent& event);
+    void OnLaunchEditor(wxCommandEvent& event) override;
 
     void InitGraph();
     void InitCalDisplay();
@@ -81,6 +98,11 @@ private:
 
     wxDECLARE_EVENT_TABLE();
 };
+
+inline bool LogViewFrame::ArcsecsSelected() const
+{
+    return m_units->GetSelection() == 0;
+}
 
 class SettingsDialog : public SettingsDialogBase
 {
@@ -92,5 +114,43 @@ public:
     void OnRAColor(wxCommandEvent& event);
     void OnDecColor(wxCommandEvent& event);
 };
+
+extern void SaveGeometry(const wxFrame *win, const wxString& key);
+extern void LoadGeometry(wxFrame *win, const wxString& key);
+
+struct PointArray
+{
+    wxPoint *pts;
+    unsigned int size;
+    PointArray() : pts(nullptr), size(0) { }
+    ~PointArray() { delete[] pts; }
+    void alloc(unsigned int n)
+    {
+        if (size < n)
+        {
+            delete[] pts;
+            pts = new wxPoint[n];
+            size = n;
+        }
+    }
+};
+extern PointArray s_tmp;
+
+struct SettleParams
+{
+    double pixels;
+    double seconds;
+};
+
+struct Settings
+{
+    bool excludeByServer;
+    bool excludeParametric;
+    SettleParams settle;
+    wxColor raColor;
+    wxColor decColor;
+    double vscale;
+};
+extern Settings s_settings;
 
 #endif // __LogViewFrame__
