@@ -1,3 +1,11 @@
+Version 0.6.0 - 8 February 2018
+
+        * Display RA and Dec drift information
+        * Analyze Guiding Assistant runs to show drift-corrected data and a frequency analysis view
+        * Label guide pulse directions on the vertical axis
+        * Add a button to open the log file in a text editor
+        * Add an option to toggle display between AO and Mount corrections
+
 Version 0.5.1 - 11 July 2017
 
         * Change license to GPLv3
