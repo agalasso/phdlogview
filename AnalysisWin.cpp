@@ -316,7 +316,7 @@ void GARun::Analyze(const GuideSession& session, size_t begin, size_t end)
     double dt = (t[n - 1] - t[0]) / (double) (n - 1);
 
     {
-        double const k = M_2_PI / (double) (n - 1);
+        double const k = M_PI * 2.0 / (double) (n - 1);
         Spline spline(t, rac, n);
         double x = t[0];
         for (unsigned int i = 0; i < n; i++, x += dt)
