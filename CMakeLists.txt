@@ -191,7 +191,10 @@ if(WIN32)
   set(APP_LINK_EXTERNAL ${APP_LINK_EXTERNAL} ${gsl_lib_dir}/gsl.lib)
   add_custom_command(TARGET phdlogview POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${gsl_lib_dir}/gsl.dll" "${gsl_lib_dir}/cblas.dll" $<TARGET_FILE_DIR:phdlogview>)
+      "${gsl_lib_dir}/gsl.dll"
+      "${gsl_lib_dir}/cblas.dll"
+      "${CMAKE_SOURCE_DIR}/3rdparty/vcruntime140.dll"
+      $<TARGET_FILE_DIR:phdlogview>)
 else()
   find_package(GSL REQUIRED)
   target_link_libraries(phdlogview GSL::gsl GSL::gslcblas)
@@ -201,3 +204,9 @@ target_compile_definitions( phdlogview PRIVATE "${wxWidgets_DEFINITIONS}" "HAVE_
 target_compile_options(     phdlogview PRIVATE "${wxWidgets_CXX_FLAGS};")
 target_link_libraries(phdlogview ${APP_LINK_EXTERNAL})
 target_include_directories(phdlogview PRIVATE ${wxWidgets_INCLUDE_DIRS})
+
+add_custom_command(TARGET phdlogview POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_SOURCE_DIR}/LICENSE.txt"
+    "${CMAKE_SOURCE_DIR}/README.txt"
+    $<TARGET_FILE_DIR:phdlogview>)
