@@ -51,7 +51,7 @@ struct GARun
     GARun() : len(0), t(nullptr), rac(nullptr), decc(nullptr), nfft(0), fftx(nullptr), ffty(nullptr) { }
     ~GARun();
     static bool CanAnalyze(const GuideSession& session, size_t begin, size_t end);
-    void Analyze(const GuideSession& session, size_t begin, size_t end);
+    void Analyze(const GuideSession& session, size_t begin, size_t end, bool undo_ra_corrections);
 };
 
 class AnalysisWin : public AnalyzeFrameBase
@@ -68,7 +68,7 @@ public:
     static bool CanAnalyzeAll(const GuideSession& session);
 
     void AnalyzeGA(const GuideSession& session, size_t pos);
-    void AnalyzeAll(const GuideSession& session);
+    void AnalyzeAll(const GuideSession& session, bool undo_ra_corrections);
     void RefreshGraph();
 
 private:

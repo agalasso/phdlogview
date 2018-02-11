@@ -248,7 +248,7 @@ bool GARun::CanAnalyze(const GuideSession& session, size_t begin, size_t end)
     return false;
 }
 
-void GARun::Analyze(const GuideSession& session, size_t begin, size_t end)
+void GARun::Analyze(const GuideSession& session, size_t begin, size_t end, bool undo_ra_corrections)
 {
     starts = session.starts;
     pixscale = session.pixelScale;
@@ -279,16 +279,30 @@ void GARun::Analyze(const GuideSession& session, size_t begin, size_t end)
     double *pra = &ra[0];
     double *pdec = &dec[0];
 
-    for (auto it = p0; it != p1; ++it)
     {
-        const GuideEntry& e = *it;
-        if (Include(e))
+        double rapos = 0.;
+        double prev_raguide = 0.;
+        double prev_raraw = 0.;
+
+        for (auto it = p0; it != p1; ++it)
         {
-            *pt++ = e.dt;
-            *pra++ = e.raraw;
-            *pdec++ = e.decraw;
-            fitR.data(e.dt, e.raraw);
-            fitD.data(e.dt, e.decraw);
+            const GuideEntry& e = *it;
+            if (Include(e))
+            {
+                double const raraw = e.raraw;
+                double const raguide = e.raguide;
+                double const move = raraw - prev_raraw - prev_raguide;
+                rapos += move;
+                prev_raraw = raraw;
+                prev_raguide = undo_ra_corrections ? raguide : 0.;
+
+                *pt++ = e.dt;
+                *pra++ = rapos;
+                *pdec++ = e.decraw;
+
+                fitR.data(e.dt, rapos);
+                fitD.data(e.dt, e.decraw);
+            }
         }
     }
 
@@ -628,7 +642,7 @@ void AnalysisWin::AnalyzeGA(const GuideSession& session, size_t pos)
 {
     size_t begin, end;
     GetGABounds(session, pos, &begin, &end);
-    m_garun.Analyze(session, begin, end);
+    m_garun.Analyze(session, begin, end, false);
     s_drpos.Init(m_graph->GetSize(), m_garun);
     s_fftpos.Init(m_graph->GetSize(), m_garun);
 }
@@ -638,9 +652,9 @@ bool AnalysisWin::CanAnalyzeAll(const GuideSession& session)
     return GARun::CanAnalyze(session, 0, session.entries.size());
 }
 
-void AnalysisWin::AnalyzeAll(const GuideSession& session)
+void AnalysisWin::AnalyzeAll(const GuideSession& session, bool undo_ra_corrections)
 {
-    m_garun.Analyze(session, 0, session.entries.size());
+    m_garun.Analyze(session, 0, session.entries.size(), undo_ra_corrections);
     s_drpos.Init(m_graph->GetSize(), m_garun);
     s_fftpos.Init(m_graph->GetSize(), m_garun);
 }

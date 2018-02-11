@@ -638,7 +638,11 @@ void LogViewFrame::OnMenuAnalyzeAll(wxCommandEvent& event)
     if (!m_analysisWin)
         m_analysisWin = new AnalysisWin(this);
 
-    m_analysisWin->AnalyzeAll(*m_session);
+    bool undo_ra_corrections = false;
+    if (wxGetKeyState(WXK_CONTROL))
+        undo_ra_corrections = true;
+
+    m_analysisWin->AnalyzeAll(*m_session, undo_ra_corrections);
 
     if (m_analysisWin->IsShown())
     {
