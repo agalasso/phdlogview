@@ -2094,6 +2094,16 @@ void LogViewFrame::OnRAChecked( wxCommandEvent& event )
     m_graph->Refresh();
 }
 
+void LogViewFrame::OnIconize(wxIconizeEvent& event)
+{
+    event.Skip();
+}
+
+void LogViewFrame::OnActivate(wxActivateEvent& event)
+{
+    event.Skip();
+}
+
 void LogViewFrame::OnClose(wxCloseEvent& event)
 {
     if (m_analysisWin)

@@ -87,6 +87,8 @@ private:
     void OnTimer(wxTimerEvent& evt);
     void OnCaptureLost(wxMouseCaptureLostEvent& evt);
     void OnSizeGraph(wxSizeEvent& event);
+    void OnIconize(wxIconizeEvent& event);
+    void OnActivate(wxActivateEvent& event);
     void OnClose(wxCloseEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnStatsChar(wxKeyEvent& event);

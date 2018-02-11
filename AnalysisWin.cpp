@@ -518,6 +518,11 @@ struct DriftPos : public GraphPos
     {
         return (int) (t / scx + xofs);
     }
+    double RaOrDec(int y)
+    {
+        int const ymid = (y0 + y1) / 2;
+        return (double)(y - ymid) / scy;
+    }
     void HReset(int width)
     {
         x0 = PADX;
@@ -870,7 +875,13 @@ void AnalysisWin::OnMove(wxMouseEvent& event)
         wxString s;
         double const t = s_drpos.T(x);
         if (m_garun.len >= 2 && t >= m_garun.t[0] && t <= m_garun.t[m_garun.len - 1])
-            s = wxString::Format("Time: %.1fs  %s", t, (m_garun.starts + wxTimeSpan(0, 0, t)).Format("%H:%M:%S"));
+        {
+            int y = event.GetPosition().y;
+            double yval = s_drpos.RaOrDec(y);
+            s = wxString::Format("Time: %-.1fs  %s    Y: %.2f\" (%.2fpx)",
+                    t, (m_garun.starts + wxTimeSpan(0, 0, t)).Format("%H:%M:%S"),
+                    -yval * m_garun.pixscale, -yval);
+        }
         m_statusBar->SetStatusText(s);
     }
 }
@@ -889,13 +900,13 @@ static void PaintDrift(AnalysisWin *aw, const GARun& ga, wxDC& dc)
     // time divisions
     {
         enum { MINSEP = 40 };
-        dc.SetTextForeground(wxColour(60, 60, 60));
+        dc.SetTextForeground(*wxLIGHT_GREY);
 #if defined(__WXOSX__)
         dc.SetFont(wxSMALL_FONT->Smaller());
 #else
         dc.SetFont(wxSWISS_FONT->Smaller());
 #endif
-        dc.SetPen(wxPen(wxColour(20, 20, 20), 1, wxSOLID));
+        dc.SetPen(wxPen(wxColour(80, 80, 80), 1, wxDOT));
         double const dt = s_drpos.T(MINSEP) - s_drpos.T(0);
         double const incr = pow(10.0, ceil(log10(dt)));
         double const start = ceil(s_drpos.T(s_drpos.x0) / incr) * incr;
@@ -930,7 +941,7 @@ static void PaintDrift(AnalysisWin *aw, const GARun& ga, wxDC& dc)
             int const y0 = (s_drpos.y0 + s_drpos.y1) / 2;
             int const x0 = s_drpos.x0;
             int const x1 = s_drpos.x1;
-            dc.SetPen(wxPen(wxColour(20, 20, 20), 1, wxDOT));
+            dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxDOT));
             double dy = v;
             wxString format = arcsecs ? "%g\"" : "%g";
             for (int y = y0 - iv; y > s_drpos.y1; y -= iv, dy += v)
@@ -1019,14 +1030,13 @@ static void PaintFFT(AnalysisWin *aw, const GARun& ga, wxDC& dc)
 {
     // x grid
     {
-        dc.SetTextForeground(wxColour(60, 60, 60));
+        dc.SetTextForeground(*wxLIGHT_GREY);
 #if defined(__WXOSX__)
         dc.SetFont(wxSMALL_FONT->Smaller());
 #else
         dc.SetFont(wxSWISS_FONT->Smaller());
 #endif
-        wxPen pen(wxColour(20, 20, 20), 1, wxSOLID);
-        dc.SetPen(pen);
+        dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxSOLID));
         double p0 = s_fftpos.P(s_fftpos.x0);
         double p1 = s_fftpos.P(s_fftpos.x1);
         for (double p = StartP(p0); p < p1; p += IncrP(p))
