@@ -645,6 +645,7 @@ void AnalysisWin::AnalyzeGA(const GuideSession& session, size_t pos)
     m_garun.Analyze(session, begin, end, false);
     s_drpos.Init(m_graph->GetSize(), m_garun);
     s_fftpos.Init(m_graph->GetSize(), m_garun);
+    SetTitle(_("Analysis"));
 }
 
 bool AnalysisWin::CanAnalyzeAll(const GuideSession& session)
@@ -657,6 +658,7 @@ void AnalysisWin::AnalyzeAll(const GuideSession& session, bool undo_ra_correctio
     m_garun.Analyze(session, 0, session.entries.size(), undo_ra_corrections);
     s_drpos.Init(m_graph->GetSize(), m_garun);
     s_fftpos.Init(m_graph->GetSize(), m_garun);
+    SetTitle(undo_ra_corrections ? _("Analysis ** RA Corrections Removed **") : _("Analysis"));
 }
 
 void AnalysisWin::OnCheck(wxCommandEvent& event)
