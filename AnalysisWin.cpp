@@ -358,7 +358,8 @@ void GARun::Analyze(const GuideSession& session, size_t begin, size_t end, bool 
         fftx = new double[nfft];
         ffty = new double[nfft];
 
-        double amax = 0.;
+        double scale = 4. / (double) n; // http://www.stat.ucla.edu/~frederic/221/W17/221ch4a.pdf
+        fftymax = 0.;
 
         for (size_t i = 0; i < nfft; i++)
         {
@@ -366,15 +367,11 @@ void GARun::Analyze(const GuideSession& session, size_t begin, size_t end, bool 
             double f = (double) (i + 1) / ((double) n * dt);
             double p = 1. / f;
             fftx[nfft - 1 - i] = p;
-            double a = gsl_complex_abs(*pz);
+            double a = gsl_complex_abs(*pz) * scale;
             ffty[nfft - 1 - i] = a;
-            if (a > amax)
-                amax = a;
+            if (a > fftymax)
+                fftymax = a;
         }
-
-        // normalize
-        for (size_t i = 0; i < nfft; i++)
-            ffty[i] /= amax;
 
         ffts.Init(fftx, ffty, nfft);
     }
@@ -430,7 +427,7 @@ struct FFTPos : public GraphPos
     {
         y0 = height - PADY;
         y1 = PADY;
-        scy = 0.9 * (double) (height - 2 * PADY);
+        scy = 0.8 * (double) (y0 - y1) / ga->fftymax;
     }
     void Resize(const wxSize& sz)
     {
@@ -884,7 +881,9 @@ void AnalysisWin::OnMove(wxMouseEvent& event)
         double p, a;
         s_fftpos.Eval(m_cursor, &y, &p, &a);
 
-        m_statusBar->SetStatusText(wxString::Format("Period: %.1fs", p));
+        m_statusBar->SetStatusText(wxString::Format("Period: %.1fs  Amplitude: %.1f\" (%.2fpx)  P-P: %.1f\" (%.2fpx)  RMS: %.1f\" (%.2fpx)",
+            p, a * m_garun.pixscale, a, 2. * a * m_garun.pixscale, 2. * a,
+            M_SQRT2 / 2.0 * a * m_garun.pixscale, M_SQRT2 / 2.0 * a));
     }
     else
     {
@@ -1062,6 +1061,39 @@ static void PaintFFT(AnalysisWin *aw, const GARun& ga, wxDC& dc)
             dc.DrawText(wxString::Format("%g", p), x + 2, s_fftpos.y1 + 1);
         }
         dc.DrawLine(s_fftpos.x0, s_fftpos.y0, s_fftpos.x1, s_fftpos.y0);
+    }
+
+    {
+        // horizontal grid lines
+        double vsc = s_fftpos.scy;
+        bool const arcsecs = wxGetApp().LVFrame()->ArcsecsSelected();
+        if (arcsecs) // arc-seconds
+            vsc /= ga.pixscale;
+        double v = (double) aw->m_graph->GetSize().GetHeight() * (0.5 / 6.0) / vsc;
+        double m = pow(10, ceil(log10(v)));
+        double t;
+        if (v < (t = .25 * m))
+            v = t;
+        else if (v < (t = .5 * m))
+            v = t;
+        else
+            v = m;
+        int iv = (int) (v * vsc);
+
+        if (iv > 0)
+        {
+            int const y0 = s_drpos.y0;
+            int const x0 = s_drpos.x0;
+            int const x1 = s_drpos.x1;
+            dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxDOT));
+            double dy = v;
+            wxString format = arcsecs ? "%g\"" : "%g";
+            for (int y = y0 - iv; y > s_drpos.y1; y -= iv, dy += v)
+            {
+                dc.DrawLine(x0, y, x1, y);
+                dc.DrawText(wxString::Format(format, dy), 3, y + 2);
+            }
+        }
     }
 
     int const dx = 1;

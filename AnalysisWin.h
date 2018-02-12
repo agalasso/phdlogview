@@ -48,6 +48,7 @@ struct GARun
     double *fftx; // FFT period
     double *ffty; // FFT amplitude
     Spline ffts;  // FFT spline for graphing
+    double fftymax;
     GARun() : len(0), t(nullptr), rac(nullptr), decc(nullptr), nfft(0), fftx(nullptr), ffty(nullptr) { }
     ~GARun();
     static bool CanAnalyze(const GuideSession& session, size_t begin, size_t end);
