@@ -229,7 +229,7 @@ struct Line
 
 inline static bool Include(const GuideEntry& e)
 {
-    return e.included && !e.err;
+    return e.included && StarWasFound(e.err);
 }
 
 bool GARun::CanAnalyze(const GuideSession& session, size_t begin, size_t end)
@@ -241,8 +241,8 @@ bool GARun::CanAnalyze(const GuideSession& session, size_t begin, size_t end)
     enum { MIN_ENTRIES = 12 }; // need at least 12 for FFT output spline (N / 2 - 1 >= 5)
 
     size_t n = 0;
-    for (const auto& e : entries)
-        if (Include(e) && ++n >= 12)
+    for (auto it = p0; it != p1; ++it)
+        if (Include(*it) && ++n >= MIN_ENTRIES)
             return true;
 
     return false;
