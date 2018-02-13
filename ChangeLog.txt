@@ -1,3 +1,9 @@
+Version 0.6.1 - 13 February 2018
+
+        * Analysis view: fix problem with saturated star frames being incorrectly excluded from the analysis
+        * Analysis view: make grid lines more visible and add a y-axis scale to the periodogram
+        * Analysis view: add read-out of the cursor position for both the drift-corrected view and the periodogram
+
 Version 0.6.0 - 8 February 2018
 
         * Display RA and Dec drift information

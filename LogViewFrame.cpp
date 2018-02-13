@@ -52,7 +52,7 @@
 #define MIN_SHOW 25
 
 #define APP_NAME "PHD2 Log Viewer"
-#define APP_VERSION_STR "0.6.0"
+#define APP_VERSION_STR "0.6.1"
 
 PointArray s_tmp;
 Settings s_settings;
@@ -660,7 +660,7 @@ void LogViewFrame::OnHelpAbout(wxCommandEvent& event)
     aboutInfo.SetName(APP_NAME);
     aboutInfo.SetVersion(APP_VERSION_STR);
     aboutInfo.SetDescription(_("A tool for visualizing PHD2 guide log data"));
-    aboutInfo.SetCopyright("(C) 2015 Andy Galasso <andy.galasso@gmail.com>");
+    aboutInfo.SetCopyright("(C) 2018 Andy Galasso <andy.galasso@gmail.com>");
     aboutInfo.SetWebSite("http://adgsoftware.com/phd2utils");
     aboutInfo.AddDeveloper("Andy Galasso");
 
