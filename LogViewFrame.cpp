@@ -139,10 +139,20 @@ inline static bool vscale_locked()
     return s_settings.vscale != 0.0;
 }
 
-static void update_vscale_setting(double vscale)
+static void _update_vscale_setting(double vscale)
 {
     s_settings.vscale = vscale;
     Config->Write("/vscale", vscale);
+}
+
+inline static void update_vscale_setting(double vscale, double pixelScale)
+{
+    _update_vscale_setting(vscale / pixelScale);
+}
+
+inline static double get_vscale_setting(double pixelScale)
+{
+    return s_settings.vscale * pixelScale;
 }
 
 static void InitLegends(bool radec, wxTextCtrl *ra, wxTextCtrl *dec)
@@ -1136,10 +1146,10 @@ void LogViewFrame::OnMove(wxMouseEvent& event)
                 }
                 else
                 {
-                    double vscale = vscale_locked() ? s_settings.vscale : ginfo.vscale;
+                    double vscale = vscale_locked() ? get_vscale_setting(m_session->pixelScale) : ginfo.vscale;
                     vscale *= (dy < 0 ? 1.05 : 1.0 / 1.05);
                     if (vscale_locked())
-                        update_vscale_setting(vscale);
+                        update_vscale_setting(vscale, m_session->pixelScale);
                     else
                         ginfo.vscale = vscale;
 
@@ -1401,7 +1411,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
     const GuideSession::EntryVec& entries = m_session->entries;
     const GraphInfo& ginfo = m_session->m_ginfo;
-    double const vscale = vscale_locked() ? s_settings.vscale : ginfo.vscale;
+    double const vscale = vscale_locked() ? get_vscale_setting(m_session->pixelScale) : ginfo.vscale;
 
     unsigned int i0, i1;
     if (entries.size())
@@ -1861,7 +1871,7 @@ void LogViewFrame::OnVPlus( wxCommandEvent& event )
     if (m_session)
     {
         if (vscale_locked())
-            update_vscale_setting(s_settings.vscale * 1.1);
+            _update_vscale_setting(s_settings.vscale * 1.1);
         else
             m_session->m_ginfo.vscale *= 1.1;
         s_scatter.Invalidate();
@@ -1874,7 +1884,7 @@ void LogViewFrame::OnVMinus( wxCommandEvent& event )
     if (m_session)
     {
         if (vscale_locked())
-            update_vscale_setting(s_settings.vscale / 1.1);
+            _update_vscale_setting(s_settings.vscale / 1.1);
         else
             m_session->m_ginfo.vscale /= 1.1;
         s_scatter.Invalidate();
@@ -1896,7 +1906,7 @@ void LogViewFrame::OnVReset( wxCommandEvent& event )
             vscale = 1.0;
 
         if (vscale_locked())
-            update_vscale_setting(vscale);
+            update_vscale_setting(vscale, m_session->pixelScale);
         else
             ginfo.vscale = vscale;
 
@@ -1919,7 +1929,7 @@ void LogViewFrame::OnVLock(wxCommandEvent& event)
 {
     if (m_vlock->GetValue())
     {
-        update_vscale_setting(m_session->m_ginfo.vscale);
+        update_vscale_setting(m_session->m_ginfo.vscale, m_session->pixelScale);
     }
     else
     {
@@ -1929,10 +1939,10 @@ void LogViewFrame::OnVLock(wxCommandEvent& event)
             if (it->type == GUIDING_SECTION)
             {
                 GuideSession &session = static_cast<GuideSession&>(s_log.sessions[it->idx]);
-                session.m_ginfo.vscale = s_settings.vscale;
+                session.m_ginfo.vscale = get_vscale_setting(session.pixelScale);
             }
         }
-        update_vscale_setting(0.0);
+        _update_vscale_setting(0.0);
     }
 }
 
