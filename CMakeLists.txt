@@ -193,6 +193,8 @@ if(WIN32)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${gsl_lib_dir}/gsl.dll"
       "${gsl_lib_dir}/cblas.dll"
+      "${CMAKE_SOURCE_DIR}/3rdparty/msvcp120.dll"
+      "${CMAKE_SOURCE_DIR}/3rdparty/msvcr120.dll"
       "${CMAKE_SOURCE_DIR}/3rdparty/vcruntime140.dll"
       $<TARGET_FILE_DIR:phdlogview>)
 else()

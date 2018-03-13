@@ -39,6 +39,8 @@ Source: "tmp\Release\phdlogview.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\Release\cblas.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\Release\gsl.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\Release\vcruntime140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "tmp\Release\msvcp120.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "tmp\Release\msvcr120.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\Release\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\Release\README.txt"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
