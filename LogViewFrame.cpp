@@ -119,6 +119,7 @@ enum
     ID_EXCLUDE_SETTLE,
     ID_ANALYZE_GA,
     ID_ANALYZE_ALL,
+    ID_ANALYZE_ALL_NORA,
 };
 
 wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
@@ -129,7 +130,7 @@ wxBEGIN_EVENT_TABLE(LogViewFrame, LogViewFrameBase)
   EVT_MENU(wxID_ABOUT, LogViewFrame::OnHelpAbout)
   EVT_MENU_RANGE(ID_INCLUDE_ALL, ID_EXCLUDE_SETTLE, LogViewFrame::OnMenuInclude)
   EVT_MENU(ID_ANALYZE_GA, LogViewFrame::OnMenuAnalyzeGA)
-  EVT_MENU(ID_ANALYZE_ALL, LogViewFrame::OnMenuAnalyzeAll)
+  EVT_MENU_RANGE(ID_ANALYZE_ALL, ID_ANALYZE_ALL_NORA, LogViewFrame::OnMenuAnalyzeAll)
   EVT_MOUSEWHEEL(LogViewFrame::OnMouseWheel)
   EVT_TIMER(ID_TIMER, LogViewFrame::OnTimer)
 wxEND_EVENT_TABLE()
@@ -539,11 +540,15 @@ void LogViewFrame::OnRightUp(wxMouseEvent& event)
     menu->Append(ID_EXCLUDE_SETTLE, _("Exclude frames settling"));
     menu->AppendSeparator();
 
-    wxMenuItem *mi = menu->Append(ID_ANALYZE_ALL, _("Analyze selected frames"));
+    wxMenuItem *mi1 = menu->Append(ID_ANALYZE_ALL, _("Analyze selected frames"));
+    wxMenuItem *mi2 = menu->Append(ID_ANALYZE_ALL_NORA, _("Analyze selected, raw RA"));
     if (!AnalysisWin::CanAnalyzeAll(*m_session))
-        mi->Enable(false);
+    {
+        mi1->Enable(false);
+        mi2->Enable(false);
+    }
 
-    mi = menu->Append(ID_ANALYZE_GA, _("Analyze unguided section"));
+    wxMenuItem *mi = menu->Append(ID_ANALYZE_GA, _("Analyze unguided section"));
 
     {
         GraphInfo& ginfo = m_session->m_ginfo;
@@ -648,9 +653,7 @@ void LogViewFrame::OnMenuAnalyzeAll(wxCommandEvent& event)
     if (!m_analysisWin)
         m_analysisWin = new AnalysisWin(this);
 
-    bool undo_ra_corrections = false;
-    if (wxGetKeyState(WXK_CONTROL))
-        undo_ra_corrections = true;
+    bool undo_ra_corrections = event.GetId() == ID_ANALYZE_ALL_NORA;
 
     m_analysisWin->AnalyzeAll(*m_session, undo_ra_corrections);
 
