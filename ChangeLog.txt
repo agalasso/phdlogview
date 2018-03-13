@@ -1,3 +1,9 @@
+Version 0.6.2 - 13 MArch 2018
+
+        * Analysis view: add an uption to "undo" RA corrections to view unguided RA tracking
+        * When vertical scale is locked, lock the arc-seconds scale, not the pixel scale
+        * Windows: add missing runtime DLLs
+
 Version 0.6.1 - 13 February 2018
 
         * Analysis view: fix problem with saturated star frames being incorrectly excluded from the analysis
