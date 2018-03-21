@@ -199,7 +199,15 @@ if(WIN32)
       $<TARGET_FILE_DIR:phdlogview>)
 else()
   find_package(GSL REQUIRED)
-  target_link_libraries(phdlogview GSL::gsl GSL::gslcblas)
+  if(APPLE)
+    # force static loining on OSX to avoid redistributing GSL .dylib files
+    # this is a hack... what's the real way to do this in CMake?
+    string(REPLACE ".dylib" ".a" GSL_LIBRARIES "${GSL_LIBRARIES}")
+    set(APP_LINK_EXTERNAL ${APP_LINK_EXTERNAL} ${GSL_LIBRARIES})
+    include_directories(${GSL_INCLUDE_DIR})
+  else()
+    target_link_libraries(phdlogview GSL::gsl GSL::gslcblas)
+  endif()
 endif()
 
 target_compile_definitions( phdlogview PRIVATE "${wxWidgets_DEFINITIONS}" "HAVE_TYPE_TRAITS")
