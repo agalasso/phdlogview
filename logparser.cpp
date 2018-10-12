@@ -273,19 +273,19 @@ static bool ParseEntry(const std::string& ln, GuideEntry& e)
     return true;
 }
 
-inline static void GetDbl(const wxString& ln, const wxString& key, double *d, double dflt)
+inline static void GetDbl(const std::string& ln, const std::string& key, double *d, double dflt)
 {
     size_t pos = ln.find(key);
-    if (pos != wxString::npos)
+    if (pos != std::string::npos)
     {
-        wxString s = ln.substr(pos + key.length());
-        toDouble(s, d, dflt);
+        std::string s = ln.substr(pos + key.length());
+        toDouble(s.c_str(), d, dflt);
     }
     else
         *d = dflt;
 }
 
-static void ParseMount(const wxString& ln, Mount& mount)
+static void ParseMount(const std::string& ln, Mount& mount)
 {
     mount.isValid = true;
 
@@ -301,14 +301,26 @@ static void ParseMount(const wxString& ln, Mount& mount)
         mount.yRate *= 1000.0;
 }
 
-static void GetMinMo(const wxString& ln, Limits *lim)
+static void GetMinMo(const std::string& ln, Limits *lim)
 {
     GetDbl(ln, MINMOVE, &lim->minMo, 0.0);
 }
 
 inline static bool StartsWith(const std::string& s, const std::string& pfx)
 {
-    return s.compare(0, pfx.length(), pfx) == 0;
+    return s.length() >= pfx.length() &&
+        s.compare(0, pfx.length(), pfx) == 0;
+}
+
+inline static bool EndsWith(const std::string& s, const std::string& sfx)
+{
+    return s.length() >= sfx.length() &&
+        s.compare(s.length() - sfx.length(), sfx.length(), sfx) == 0;
+}
+
+inline static std::string BeforeLast(const std::string& s, char ch)
+{
+    return s.substr(0, s.rfind(ch));
 }
 
 inline static bool IsEmpty(const std::string& s)
@@ -324,21 +336,21 @@ static void ParseInfo(const std::string& ln, GuideSession *s)
     e.info = ln.substr(INFO_KEY.length());
 
     // trim some useless prefixes
-    if (e.info.StartsWith("SETTLING STATE CHANGE, "))
+    if (StartsWith(e.info, "SETTLING STATE CHANGE, "))
         e.info = e.info.substr(23);
-    else if (e.info.StartsWith("Guiding parameter change, "))
+    else if (StartsWith(e.info, "Guiding parameter change, "))
         e.info = e.info.substr(26);
 
     // trim extra dither info
-    if (e.info.StartsWith("DITHER"))
+    if (StartsWith(e.info, "DITHER"))
     {
         size_t pos = e.info.find(", new lock pos");
-        if (pos != wxString::npos)
+        if (pos != std::string::npos)
             e.info = e.info.substr(0, pos);
     }
 
     // strip extra trailing zeroes after last "."
-    if (e.info.EndsWith("00"))
+    if (EndsWith(e.info, "00"))
     {
         wxRegEx re("\\.[0-9]+?(0+)$", wxRE_ADVANCED);
         if (re.Matches(e.info))
@@ -363,13 +375,13 @@ static void ParseInfo(const std::string& ln, GuideSession *s)
         if (prev.idx == e.idx)
         {
             // coalesce parameter changes
-            if (prev.info.find('=') != wxString::npos && e.info.StartsWith(prev.info.BeforeLast('=')))
+            if (prev.info.find('=') != std::string::npos && StartsWith(e.info, BeforeLast(prev.info, '=')))
             {
                 prev = e;
                 return;
             }
             // coalesce set lock pos and dither
-            if (e.info.StartsWith("DITHER") && prev.info.StartsWith("SET LOCK POS"))
+            if (StartsWith(e.info, "DITHER") && StartsWith(prev.info, "SET LOCK POS"))
             {
                 prev = e;
                 return;
@@ -507,7 +519,7 @@ redo:
             {
                 ParseMount(ln, s->mount);
                 hdrst = MOUNT;
-                mount_enabled = ln.find(", guiding enabled, ") != wxString::npos;
+                mount_enabled = ln.find(", guiding enabled, ") != std::string::npos;
             }
             else if (StartsWith(ln, AO_KEY))
             {

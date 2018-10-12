@@ -1783,7 +1783,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             const auto& info = *it;
             if (info.idx > i1)
                 break;
-            wxString s = info.repeats > 1 ? wxString::Format("%d x %s", info.repeats, info.info) : info.info;
+            wxString s = info.repeats > 1 ? wxString::Format("%d x %s", info.repeats, info.info) : wxString(info.info);
             int width = dc.GetTextExtent(s).x;
             int xpos = info.idx * ginfo.hscale - ginfo.xofs;
             if (info.idx <= (int)i0)

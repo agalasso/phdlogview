@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <math.h>
+#include <string>
 #include <vector>
 
 enum WhichMount { MOUNT, AO, };
@@ -50,7 +51,7 @@ struct GuideEntry
     int mass;
     float snr;
     int err;
-    wxString info;
+    std::string info;
 };
 
 inline static bool StarWasFound(int err)
@@ -69,7 +70,7 @@ struct InfoEntry
 {
     int idx;  // index of following frame
     int repeats;
-    wxString info;
+    std::string info;
 };
 
 enum CalDirection
