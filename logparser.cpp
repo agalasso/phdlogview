@@ -20,6 +20,7 @@
 #include "logparser.h"
 #include "LogViewApp.h"
 
+#include <algorithm>
 #include <wx/tokenzr.h>
 #include <wx/txtstrm.h>
 #include <wx/wfstream.h>
@@ -441,6 +442,81 @@ static void rtrim(std::string& ln)
         ln = ln.substr(0, end + 1);
 }
 
+static bool is_monotonic(const GuideSession& session)
+{
+    const auto& entries = session.entries;
+
+    if (entries.size() <= 1)
+        return true;
+
+    for (auto it = entries.begin() + 1; it != entries.end(); ++it)
+        if (it->dt <= (it - 1)->dt)
+            return false;
+
+    return true;
+}
+
+static void insert_info(GuideSession& session, const GuideSession::EntryVec::iterator& entrypos,
+                        const std::string& info)
+{
+    auto pos = session.infos.begin();
+    while (pos != session.infos.end())
+    {
+        const auto& e = session.entries[pos->idx];
+        if (e.frame >= entrypos->frame)
+            break;
+        ++pos;
+    }
+    int idx = entrypos - session.entries.begin();
+    session.infos.insert(pos, { .idx = idx, .repeats = 1, .info = info });
+}
+
+static void FixupNonMonotonic(GuideSession& session)
+{
+    if (is_monotonic(session))
+        return;
+
+    // get the median positive interval
+
+    double med;
+
+    {
+        std::vector<double> v;
+        for (auto it = session.entries.begin() + 1; it != session.entries.end(); ++it)
+        {
+            double d = it->dt - (it - 1)->dt;
+            if (d > 0.)
+                v.push_back(d);
+        }
+        if (v.size() < 1)
+            return;
+        std::nth_element(v.begin(), v.begin() + v.size() / 2, v.end());
+        med = v[v.size() / 2];
+    }
+
+    // replace any negative interval with the median interval
+
+    double corr = 0.;
+
+    for (auto it = session.entries.begin() + 1; it != session.entries.end(); ++it)
+    {
+        double d = it->dt + corr - (it - 1)->dt;
+        if (d <= 0.)
+        {
+            corr += med - d;
+            insert_info(session, it, "Timestamp jumped backwards");
+        }
+        it->dt += corr;
+    }
+}
+
+static void FixupNonMonotonic(GuideLog& log)
+{
+    for (auto& section : log.sections)
+        if (section.type == GUIDING_SECTION)
+            FixupNonMonotonic(log.sessions[section.idx]);
+}
+
 bool LogParser::Parse(std::istream& is, GuideLog& log)
 {
     log.phd_version.clear();
@@ -676,6 +752,8 @@ redo:
         if (p != s->entries.rend())
             s->duration = p->dt;
     }
+
+    FixupNonMonotonic(log);
 
     return true;
 }
