@@ -148,19 +148,28 @@ set (FBSRC
   ${CMAKE_CURRENT_BINARY_DIR}/LogViewFrameBase.h
 )
 
-if (WIN32)
-  set (WXFB "C:\\Program Files (x86)\\wxFormBuilder\\wxFormBuilder.exe")
-  set (WXFB_GENERATE "/g")
-else()
-  set (WXFB wxformbuilder)
-  set (WXFB_GENERATE "-g")
-endif()
+set (HAVE_WXFB TRUE CACHE BOOL "whether to use wxformbuilder")
 
-ADD_CUSTOM_COMMAND(
-  OUTPUT ${FBSRC}
-  COMMAND ${WXFB} ${WXFB_GENERATE} ${srcdir}/phdlogview.fbp
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/phdlogview.fbp
-)
+if (HAVE_WXFB)
+
+  if (WIN32)
+    set (WXFB "C:\\Program Files (x86)\\wxFormBuilder\\wxFormBuilder.exe")
+    set (WXFB_GENERATE "/g")
+  else()
+    set (WXFB wxformbuilder)
+    set (WXFB_GENERATE "-g")
+  endif()
+
+  ADD_CUSTOM_COMMAND(
+    OUTPUT ${FBSRC}
+    COMMAND ${WXFB} ${WXFB_GENERATE} ${srcdir}/phdlogview.fbp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/phdlogview.fbp
+  )
+else()
+  # no wxFormBuilder, use pre-generated files
+  configure_file(${srcdir}/generated/LogViewFrameBase.cpp ${CMAKE_CURRENT_BINARY_DIR}/LogViewFrameBase.cpp COPYONLY)
+  configure_file(${srcdir}/generated/LogViewFrameBase.h ${CMAKE_CURRENT_BINARY_DIR}/LogViewFrameBase.h COPYONLY)
+endif()
 
 set (ALL_SRC
   ${SRC}
