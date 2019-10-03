@@ -229,3 +229,12 @@ add_custom_command(TARGET phdlogview POST_BUILD
     "${CMAKE_SOURCE_DIR}/LICENSE.txt"
     "${CMAKE_SOURCE_DIR}/README.txt"
     $<TARGET_FILE_DIR:phdlogview>)
+
+if(UNIX AND NOT APPLE)
+  install(TARGETS phdlogview
+          RUNTIME DESTINATION bin)
+  install(FILES ${CMAKE_SOURCE_DIR}/phdlogview.png
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pixmaps/ )
+  install(FILES ${CMAKE_SOURCE_DIR}/phdlogview.desktop
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications/ )
+endif()

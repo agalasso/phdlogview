@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.1
+Name=PHD2 Log Viewer
+Comment=View and analyze PHD2 guide logs
+Icon=phdlogview
+Exec=phdlogview %f
+Terminal=false
+MimeType=text/plain
+Categories=Education;Science;Astronomy;
