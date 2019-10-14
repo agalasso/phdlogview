@@ -1339,7 +1339,7 @@ static void PaintCalibration(wxDC& dc, const Calibration *cal, wxWindow *graph)
     dc.DrawLine(x0, y0 - tsize / 2, x0, y0 + tsize / 2);
 
     // 5-pixel circles
-    wxPen GreyDashPen(wxColour(100, 100, 100), 1, wxDOT);
+    wxPen GreyDashPen(wxColour(100, 100, 100), 1, wxPENSTYLE_DOT);
     dc.SetPen(GreyDashPen);
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
     double dr = 5.0;
@@ -1466,7 +1466,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
 
         if (iv > 0)
         {
-            dc.SetPen(wxPen(wxColour(100, 100, 100), 1, wxDOT));
+            dc.SetPen(wxPen(wxColour(100, 100, 100), 1, wxPENSTYLE_DOT));
             double dy = v;
             wxString format = arcsecs ? "%g\"" : "%g";
             for (int y = y0 - iv; y > 0; y -= iv, dy += v)
@@ -1520,7 +1520,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // max ra (milliseconds) * xRate (px/sec)
                 int y = (int)(m_session->mount.xlim.maxDur * m_session->mount.xRate / 1000.0 * vscale);
-                dc.SetPen(wxPen(s_settings.raColor, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.raColor, 1, wxPENSTYLE_DOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1528,7 +1528,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // minMo (pixels)
                 int y = (int)(m_session->mount.xlim.minMo * vscale);
-                dc.SetPen(wxPen(s_settings.raColor, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.raColor, 1, wxPENSTYLE_DOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1539,7 +1539,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // max dec (milliseconds) * yRate (px/sec)
                 int y = (int)(m_session->mount.ylim.maxDur * m_session->mount.yRate / 1000.0 * vscale);
-                dc.SetPen(wxPen(s_settings.decColor, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.decColor, 1, wxPENSTYLE_DOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -1547,7 +1547,7 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             {
                 // minMo (pixels)
                 int y = (int)(m_session->mount.ylim.minMo * vscale);
-                dc.SetPen(wxPen(s_settings.decColor, 1, wxDOT));
+                dc.SetPen(wxPen(s_settings.decColor, 1, wxPENSTYLE_DOT));
                 dc.DrawLine(0, y0 - y, fullw, y0 - y);
                 dc.DrawLine(0, y0 + y, fullw, y0 + y);
             }
@@ -2125,7 +2125,7 @@ void LogViewFrame::OnClose(wxCloseEvent& event)
 {
     if (m_analysisWin)
         m_analysisWin->Close(true);
-    SaveGeometry(this, "/geometry");
+    ::SaveGeometry(this, "/geometry");
     event.Skip();
 }
 

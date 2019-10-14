@@ -665,7 +665,7 @@ void AnalysisWin::OnCheck(wxCommandEvent& event)
 
 void AnalysisWin::OnClose(wxCloseEvent& event)
 {
-    SaveGeometry(this, "/geometry.awin");
+    ::SaveGeometry(this, "/geometry.awin");
     event.Skip();
 }
 
@@ -921,7 +921,7 @@ static void PaintDrift(AnalysisWin *aw, const GARun& ga, wxDC& dc)
 #else
         dc.SetFont(wxSWISS_FONT->Smaller());
 #endif
-        dc.SetPen(wxPen(wxColour(80, 80, 80), 1, wxDOT));
+        dc.SetPen(wxPen(wxColour(80, 80, 80), 1, wxPENSTYLE_DOT));
         double const dt = s_drpos.T(MINSEP) - s_drpos.T(0);
         double const incr = pow(10.0, ceil(log10(dt)));
         double const start = ceil(s_drpos.T(s_drpos.x0) / incr) * incr;
@@ -956,7 +956,7 @@ static void PaintDrift(AnalysisWin *aw, const GARun& ga, wxDC& dc)
             int const y0 = (s_drpos.y0 + s_drpos.y1) / 2;
             int const x0 = s_drpos.x0;
             int const x1 = s_drpos.x1;
-            dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxDOT));
+            dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxPENSTYLE_DOT));
             double dy = v;
             wxString format = arcsecs ? "%g\"" : "%g";
             for (int y = y0 - iv; y > s_drpos.y1; y -= iv, dy += v)
@@ -1051,7 +1051,7 @@ static void PaintFFT(AnalysisWin *aw, const GARun& ga, wxDC& dc)
 #else
         dc.SetFont(wxSWISS_FONT->Smaller());
 #endif
-        dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxSOLID));
+        dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxPENSTYLE_SOLID));
         double p0 = s_fftpos.P(s_fftpos.x0);
         double p1 = s_fftpos.P(s_fftpos.x1);
         for (double p = StartP(p0); p < p1; p += IncrP(p))
@@ -1085,7 +1085,7 @@ static void PaintFFT(AnalysisWin *aw, const GARun& ga, wxDC& dc)
             int const y0 = s_drpos.y0;
             int const x0 = s_drpos.x0;
             int const x1 = s_drpos.x1;
-            dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxDOT));
+            dc.SetPen(wxPen(wxColour(60, 60, 60), 1, wxPENSTYLE_DOT));
             double dy = v;
             wxString format = arcsecs ? "%g\"" : "%g";
             for (int y = y0 - iv; y > s_drpos.y1; y -= iv, dy += v)
@@ -1112,7 +1112,7 @@ static void PaintFFT(AnalysisWin *aw, const GARun& ga, wxDC& dc)
 
     if (aw->m_cursor >= 0)
     {
-        wxPen YellowDashPen(wxColour(140, 140, 0), 1, wxDOT);
+        wxPen YellowDashPen(wxColour(140, 140, 0), 1, wxPENSTYLE_DOT);
         dc.SetPen(YellowDashPen);
         dc.DrawLine(aw->m_cursor, s_fftpos.y0, aw->m_cursor, s_fftpos.y1);
         int y = s_fftpos.Eval(aw->m_cursor);
