@@ -1,4 +1,8 @@
-Version 0.6.2 - 13 MArch 2018
+Version 0.6.3 - 15 Dec 2019
+        * High DPI screen fixes - allow resizing panels and auto-size grids to fit content
+        * handle logs with backwards timestamp jumps
+
+Version 0.6.2 - 13 March 2018
 
         * Analysis view: add an uption to "undo" RA corrections to view unguided RA tracking
         * When vertical scale is locked, lock the arc-seconds scale, not the pixel scale
