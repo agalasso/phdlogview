@@ -32,6 +32,7 @@
 #include <wx/graphics.h>
 #include <wx/grid.h>
 #include <wx/log.h>
+#include <wx/splitter.h>
 #include <wx/stopwatch.h>
 #include <wx/textentry.h>
 #include <wx/valnum.h>
@@ -216,6 +217,20 @@ LogViewFrame::LogViewFrame()
     SetDropTarget(new FileDropTarget(this));
 
     LoadGeometry(this, "/geometry");
+
+    // load the two splitter positions
+    {
+        long val;
+        wxString s;
+        s = Config->Read("/geometry.splitter1", wxEmptyString);
+        if (!s.ToLong(&val))
+            val = 215;
+        m_splitter1->SetSashPosition(val);
+        s = Config->Read("/geometry.splitter2", wxEmptyString);
+        if (!s.ToLong(&val))
+            val = 330;
+        m_splitter2->SetSashPosition(val);
+    }
 
     s_settings.excludeByServer = Config->ReadBool("/settle/excludeByServer", true);
     s_settings.excludeParametric = Config->ReadBool("/settle/excludeParametric", false);
@@ -433,6 +448,7 @@ void LogViewFrame::OpenLog(const wxString& filename)
         m_sessions->SetCellValue(row, 1, s->date);
     }
     m_sessions->GoToCell(0, 0);
+    m_sessions->AutoSize();
     m_sessions->EndBatch();
 
     s_scatter.Invalidate();
@@ -587,6 +603,7 @@ static void InitStats(wxGrid *stats, wxHtmlWindow *stats2, const GuideSession *s
     stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * tot, tot));
     stats->SetCellValue(0, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
     stats->SetCellValue(1, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
+    stats->AutoSize();
     stats->EndBatch();
 
     std::ostringstream os;
@@ -872,7 +889,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
             if (first)
                 InitGraph();
 
-            if (!GetSizer()->IsShown(m_guideControlsSizer))
+            if (!m_mainSizer->IsShown(m_guideControlsSizer))
             {
                 bool enable = true;
                 m_vplus->Enable(enable);
@@ -882,8 +899,8 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 m_vlock->Enable(enable);
                 m_scrollbar->Enable(enable);
 
-                GetSizer()->Show(m_guideControlsSizer);
-                Layout();
+                m_mainSizer->Show(m_guideControlsSizer);
+                m_mainSizer->Layout();
             }
 
             InitStats(m_stats, m_stats2, m_session);
@@ -902,7 +919,7 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
         else
         {
             // do this first so InitCalDisplay has the right window sizes
-            if (GetSizer()->IsShown(m_guideControlsSizer))
+            if (m_mainSizer->IsShown(m_guideControlsSizer))
             {
                 bool enable = false;
                 m_vplus->Enable(enable);
@@ -912,8 +929,8 @@ void LogViewFrame::OnCellSelected(wxGridEvent& event)
                 m_vlock->Enable(enable);
                 m_scrollbar->Enable(enable);
 
-                GetSizer()->Hide(m_guideControlsSizer);
-                Layout();
+                m_mainSizer->Hide(m_guideControlsSizer);
+                m_mainSizer->Layout();
             }
 
             m_stats->ClearGrid();
@@ -2126,6 +2143,9 @@ void LogViewFrame::OnClose(wxCloseEvent& event)
     if (m_analysisWin)
         m_analysisWin->Close(true);
     ::SaveGeometry(this, "/geometry");
+    // .. and save the two splitter positions
+    Config->Write("/geometry.splitter1", wxString::Format("%d", m_splitter1->GetSashPosition()));
+    Config->Write("/geometry.splitter2", wxString::Format("%d", m_splitter2->GetSashPosition()));
     event.Skip();
 }
 

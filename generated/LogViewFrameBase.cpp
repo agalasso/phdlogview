@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Feb 16 2016)
+// C++ code generated with wxFormBuilder (version Aug  8 2018)
 // http://www.wxformbuilder.org/
 //
-// PLEASE DO "NOT" EDIT THIS FILE!
+// PLEASE DO *NOT* EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
 #include "LogViewFrameBase.h"
@@ -14,23 +14,34 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 	this->SetBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNFACE ) );
 	
-	wxBoxSizer* bSizer1;
-	bSizer1 = new wxBoxSizer( wxVERTICAL );
+	wxBoxSizer* bSizer32;
+	bSizer32 = new wxBoxSizer( wxVERTICAL );
 	
+	m_splitter1 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
+	m_splitter1->SetSashGravity( 0 );
+	m_splitter1->SetMinimumPaneSize( 100 );
+	
+	wxPanel* panel5;
+	panel5 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer8;
 	bSizer8 = new wxBoxSizer( wxHORIZONTAL );
 	
-	wxStaticBoxSizer* sbSizer1;
-	sbSizer1 = new wxStaticBoxSizer( new wxStaticBox( this, wxID_ANY, wxT("Log sections") ), wxHORIZONTAL );
+	m_splitter2 = new wxSplitterWindow( panel5, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
+	m_splitter2->SetMinimumPaneSize( 100 );
 	
-	m_sessions = new wxGrid( sbSizer1->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize( 294,160 ), wxSTATIC_BORDER );
+	wxPanel* panel7;
+	panel7 = new wxPanel( m_splitter2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxStaticBoxSizer* sbSizer1;
+	sbSizer1 = new wxStaticBoxSizer( new wxStaticBox( panel7, wxID_ANY, wxT("Log sections") ), wxHORIZONTAL );
+	
+	m_sessions = new wxGrid( sbSizer1->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize( 294,160 ), wxBORDER_STATIC );
 	
 	// Grid
 	m_sessions->CreateGrid( 8, 4 );
 	m_sessions->EnableEditing( false );
 	m_sessions->EnableGridLines( true );
 	m_sessions->SetGridLineColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNSHADOW ) );
-	m_sessions->EnableDragGridSize( false );
+	m_sessions->EnableDragGridSize( true );
 	m_sessions->SetMargins( 0, 0 );
 	
 	// Columns
@@ -38,8 +49,9 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_sessions->SetColSize( 1, 114 );
 	m_sessions->SetColSize( 2, 64 );
 	m_sessions->SetColSize( 3, 72 );
+	m_sessions->AutoSizeColumns();
 	m_sessions->EnableDragColMove( false );
-	m_sessions->EnableDragColSize( false );
+	m_sessions->EnableDragColSize( true );
 	m_sessions->SetColLabelSize( 0 );
 	m_sessions->SetColLabelAlignment( wxALIGN_CENTRE, wxALIGN_CENTRE );
 	
@@ -54,34 +66,46 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_sessions->SetDefaultCellBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNFACE ) );
 	m_sessions->SetDefaultCellTextColour( wxSystemSettings::GetColour( wxSYS_COLOUR_CAPTIONTEXT ) );
 	m_sessions->SetDefaultCellAlignment( wxALIGN_LEFT, wxALIGN_TOP );
-	sbSizer1->Add( m_sessions, 0, wxALL, 5 );
+	sbSizer1->Add( m_sessions, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer8->Add( sbSizer1, 0, wxALL, 5 );
-	
+	panel7->SetSizer( sbSizer1 );
+	panel7->Layout();
+	sbSizer1->Fit( panel7 );
+	wxPanel* panel8;
+	panel8 = new wxPanel( m_splitter2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxStaticBoxSizer* sbSizer2;
-	sbSizer2 = new wxStaticBoxSizer( new wxStaticBox( this, wxID_ANY, wxT("Section heading") ), wxVERTICAL );
+	sbSizer2 = new wxStaticBoxSizer( new wxStaticBox( panel8, wxID_ANY, wxT("Section heading") ), wxVERTICAL );
 	
 	m_sessionInfo = new wxTextCtrl( sbSizer2->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_READONLY );
-	m_sessionInfo->SetFont( wxFont( 8, 74, 90, 90, false, wxT("Arial") ) );
+	m_sessionInfo->SetFont( wxFont( 8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Arial") ) );
 	m_sessionInfo->SetBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNFACE ) );
 	
 	sbSizer2->Add( m_sessionInfo, 1, wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer8->Add( sbSizer2, 1, wxALL|wxEXPAND, 5 );
+	panel8->SetSizer( sbSizer2 );
+	panel8->Layout();
+	sbSizer2->Fit( panel8 );
+	m_splitter2->SplitVertically( panel7, panel8, -1 );
+	bSizer8->Add( m_splitter2, 1, wxEXPAND, 5 );
 	
 	
-	bSizer1->Add( bSizer8, 0, wxEXPAND, 5 );
+	panel5->SetSizer( bSizer8 );
+	panel5->Layout();
+	bSizer8->Fit( panel5 );
+	wxPanel* panel6;
+	panel6 = new wxPanel( m_splitter1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_mainSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer10;
 	bSizer10 = new wxBoxSizer( wxVERTICAL );
 	
-	m_rowInfo = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY );
+	m_rowInfo = new wxTextCtrl( panel6, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY );
 	bSizer10->Add( m_rowInfo, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer1->Add( bSizer10, 0, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
+	m_mainSizer->Add( bSizer10, 0, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer( wxHORIZONTAL );
@@ -89,25 +113,25 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	wxBoxSizer* bSizer9;
 	bSizer9 = new wxBoxSizer( wxVERTICAL );
 	
-	m_graph = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_graph = new wxPanel( panel6, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	m_graph->SetBackgroundColour( wxColour( 0, 0, 0 ) );
 	m_graph->SetMinSize( wxSize( 650,90 ) );
 	
 	bSizer9->Add( m_graph, 1, wxEXPAND | wxALL, 5 );
 	
-	m_scrollbar = new wxScrollBar( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSB_HORIZONTAL );
+	m_scrollbar = new wxScrollBar( panel6, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSB_HORIZONTAL );
 	bSizer9->Add( m_scrollbar, 0, wxALL|wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer5;
 	bSizer5 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_raLegend = new wxTextCtrl( this, wxID_ANY, wxT("―RA"), wxDefaultPosition, wxSize( 45,-1 ), wxTE_CENTRE|wxTE_READONLY|wxNO_BORDER );
+	m_raLegend = new wxTextCtrl( panel6, wxID_ANY, wxT("―RA"), wxDefaultPosition, wxSize( 45,-1 ), wxTE_CENTRE|wxTE_READONLY|wxBORDER_NONE );
 	m_raLegend->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_GRAYTEXT ) );
 	m_raLegend->SetBackgroundColour( wxColour( 0, 0, 0 ) );
 	
 	bSizer5->Add( m_raLegend, 0, wxBOTTOM|wxLEFT|wxTOP, 5 );
 	
-	m_decLegend = new wxTextCtrl( this, wxID_ANY, wxT("―Dec"), wxDefaultPosition, wxSize( 48,-1 ), wxTE_CENTRE|wxTE_READONLY|wxNO_BORDER );
+	m_decLegend = new wxTextCtrl( panel6, wxID_ANY, wxT("―Dec"), wxDefaultPosition, wxSize( 48,-1 ), wxTE_CENTRE|wxTE_READONLY|wxBORDER_NONE );
 	m_decLegend->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_GRAYTEXT ) );
 	m_decLegend->SetBackgroundColour( wxColour( 0, 0, 0 ) );
 	
@@ -116,19 +140,19 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	bSizer5->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_hminus = new wxButton( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hminus = new wxButton( panel6, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
 	m_hminus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_hminus->SetToolTip( wxT("Zoom out") );
 	
 	bSizer5->Add( m_hminus, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
 	
-	m_hplus = new wxButton( this, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hplus = new wxButton( panel6, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
 	m_hplus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_hplus->SetToolTip( wxT("Zoom in") );
 	
 	bSizer5->Add( m_hplus, 0, wxALL, 5 );
 	
-	m_hreset = new wxButton( this, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hreset = new wxButton( panel6, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
 	m_hreset->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_hreset->SetToolTip( wxT("Reset zoom") );
 	
@@ -137,7 +161,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	bSizer5->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_launch = new wxButton( this, wxID_ANY, wxT("Text"), wxDefaultPosition, wxSize( 60,-1 ), 0 );
+	m_launch = new wxButton( panel6, wxID_ANY, wxT("Text"), wxDefaultPosition, wxSize( 60,-1 ), 0 );
 	m_launch->SetToolTip( wxT("Open the log file in your text editor") );
 	
 	bSizer5->Add( m_launch, 0, wxALL, 5 );
@@ -154,32 +178,32 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	bSizer3->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_vplus = new wxButton( this, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vplus = new wxButton( panel6, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,25 ), 0 );
 	m_vplus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_vplus->SetToolTip( wxT("Zoom in") );
 	
 	bSizer3->Add( m_vplus, 0, wxALL, 5 );
 	
-	m_vminus = new wxButton( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vminus = new wxButton( panel6, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,25 ), 0 );
 	m_vminus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_vminus->SetToolTip( wxT("Zoom out") );
 	
 	bSizer3->Add( m_vminus, 0, wxALL, 5 );
 	
-	m_vreset = new wxButton( this, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vreset = new wxButton( panel6, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,25 ), 0 );
 	m_vreset->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_vreset->SetToolTip( wxT("Reset zoom") );
 	
 	bSizer3->Add( m_vreset, 0, wxALL, 5 );
 	
-	m_vpan = new wxToggleButton( this, wxID_ANY, wxT("P/&Z"), wxDefaultPosition, wxSize( 30,25 ), 0 );
-	m_vpan->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 90, false, wxEmptyString ) );
+	m_vpan = new wxToggleButton( panel6, wxID_ANY, wxT("P/&Z"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vpan->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 	m_vpan->SetToolTip( wxT("Pan / Zoom") );
 	
 	bSizer3->Add( m_vpan, 0, wxALL, 5 );
 	
-	m_vlock = new wxToggleButton( this, wxID_ANY, wxT("L"), wxDefaultPosition, wxSize( 30,25 ), 0 );
-	m_vlock->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 90, false, wxEmptyString ) );
+	m_vlock = new wxToggleButton( panel6, wxID_ANY, wxT("L"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vlock->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 	m_vlock->SetToolTip( wxT("Lock vertical scale, use the same scale for all guiding sessions") );
 	
 	bSizer3->Add( m_vlock, 0, wxALL, 5 );
@@ -191,12 +215,12 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	bSizer2->Add( bSizer3, 0, wxEXPAND, 5 );
 	
 	
-	bSizer1->Add( bSizer2, 1, wxEXPAND, 5 );
+	m_mainSizer->Add( bSizer2, 1, wxEXPAND, 5 );
 	
 	m_guideControlsSizer = new wxBoxSizer( wxHORIZONTAL );
 	
 	wxStaticBoxSizer* sbSizer4;
-	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( this, wxID_ANY, wxT("Plot options") ), wxHORIZONTAL );
+	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( panel6, wxID_ANY, wxT("Plot options") ), wxHORIZONTAL );
 	
 	wxString m_deviceChoices[] = { wxT("Mount"), wxT("AO") };
 	int m_deviceNChoices = sizeof( m_deviceChoices ) / sizeof( wxString );
@@ -306,25 +330,27 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	wxBoxSizer* bSizer22;
 	bSizer22 = new wxBoxSizer( wxVERTICAL );
 	
-	m_statsnb = new wxNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
-	m_panel1 = new wxPanel( m_statsnb, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_statsnb = new wxNotebook( panel6, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
+	wxPanel* panel1;
+	panel1 = new wxPanel( m_statsnb, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer23;
 	bSizer23 = new wxBoxSizer( wxVERTICAL );
 	
-	m_stats = new wxGrid( m_panel1, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
+	m_stats = new wxGrid( panel1, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
 	
 	// Grid
 	m_stats->CreateGrid( 3, 2 );
 	m_stats->EnableEditing( false );
 	m_stats->EnableGridLines( true );
-	m_stats->EnableDragGridSize( false );
+	m_stats->EnableDragGridSize( true );
 	m_stats->SetMargins( 0, 0 );
 	
 	// Columns
 	m_stats->SetColSize( 0, 95 );
 	m_stats->SetColSize( 1, 95 );
+	m_stats->AutoSizeColumns();
 	m_stats->EnableDragColMove( false );
-	m_stats->EnableDragColSize( false );
+	m_stats->EnableDragColSize( true );
 	m_stats->SetColLabelSize( 20 );
 	m_stats->SetColLabelValue( 0, wxT("RMS") );
 	m_stats->SetColLabelValue( 1, wxT("Peak") );
@@ -346,22 +372,23 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	bSizer23->Add( m_stats, 0, wxALL, 5 );
 	
 	
-	m_panel1->SetSizer( bSizer23 );
-	m_panel1->Layout();
-	bSizer23->Fit( m_panel1 );
-	m_statsnb->AddPage( m_panel1, wxT("Statistics"), true );
-	m_panel2 = new wxPanel( m_statsnb, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	panel1->SetSizer( bSizer23 );
+	panel1->Layout();
+	bSizer23->Fit( panel1 );
+	m_statsnb->AddPage( panel1, wxT("Statistics"), true );
+	wxPanel* panel2;
+	panel2 = new wxPanel( m_statsnb, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer24;
 	bSizer24 = new wxBoxSizer( wxVERTICAL );
 	
-	m_stats2 = new wxHtmlWindow( m_panel2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO );
+	m_stats2 = new wxHtmlWindow( panel2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO );
 	bSizer24->Add( m_stats2, 1, wxALL|wxEXPAND, 5 );
 	
 	
-	m_panel2->SetSizer( bSizer24 );
-	m_panel2->Layout();
-	bSizer24->Fit( m_panel2 );
-	m_statsnb->AddPage( m_panel2, wxT("Drift"), false );
+	panel2->SetSizer( bSizer24 );
+	panel2->Layout();
+	bSizer24->Fit( panel2 );
+	m_statsnb->AddPage( panel2, wxT("Drift"), false );
 	
 	bSizer22->Add( m_statsnb, 1, wxEXPAND | wxALL, 5 );
 	
@@ -369,10 +396,17 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_guideControlsSizer->Add( bSizer22, 1, wxEXPAND, 5 );
 	
 	
-	bSizer1->Add( m_guideControlsSizer, 0, 0, 5 );
+	m_mainSizer->Add( m_guideControlsSizer, 0, 0, 5 );
 	
 	
-	this->SetSizer( bSizer1 );
+	panel6->SetSizer( m_mainSizer );
+	panel6->Layout();
+	m_mainSizer->Fit( panel6 );
+	m_splitter1->SplitHorizontally( panel5, panel6, -1 );
+	bSizer32->Add( m_splitter1, 1, wxEXPAND, 0 );
+	
+	
+	this->SetSizer( bSizer32 );
 	this->Layout();
 	m_menubar = new wxMenuBar( 0 );
 	wxMenu* filemenu;
@@ -405,7 +439,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	this->SetMenuBar( m_menubar );
 	
-	m_statusBar1 = this->CreateStatusBar( 1, wxST_SIZEGRIP, wxID_ANY );
+	m_statusBar1 = this->CreateStatusBar( 1, wxSTB_SIZEGRIP, wxID_ANY );
 	
 	this->Centre( wxBOTH );
 	
@@ -737,7 +771,7 @@ AnalyzeFrameBase::AnalyzeFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	this->SetSizer( bSizer25 );
 	this->Layout();
-	m_statusBar = this->CreateStatusBar( 1, wxST_SIZEGRIP, wxID_ANY );
+	m_statusBar = this->CreateStatusBar( 1, wxSTB_SIZEGRIP, wxID_ANY );
 	
 	this->Centre( wxBOTH );
 	
@@ -786,4 +820,16 @@ AnalyzeFrameBase::~AnalyzeFrameBase()
 	m_hplus->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AnalyzeFrameBase::OnHPlus ), NULL, this );
 	m_hreset->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AnalyzeFrameBase::OnHReset ), NULL, this );
 	
+}
+
+MyFrame5::MyFrame5( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxFrame( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	
+	this->Centre( wxBOTH );
+}
+
+MyFrame5::~MyFrame5()
+{
 }

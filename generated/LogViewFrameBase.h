@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Feb 16 2016)
+// C++ code generated with wxFormBuilder (version Aug  8 2018)
 // http://www.wxformbuilder.org/
 //
-// PLEASE DO "NOT" EDIT THIS FILE!
+// PLEASE DO *NOT* EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
 #ifndef __LOGVIEWFRAMEBASE_H__
@@ -18,16 +18,17 @@
 #include <wx/gdicmn.h>
 #include <wx/sizer.h>
 #include <wx/statbox.h>
-#include <wx/textctrl.h>
 #include <wx/panel.h>
+#include <wx/textctrl.h>
+#include <wx/splitter.h>
 #include <wx/scrolbar.h>
+#include <wx/bitmap.h>
+#include <wx/image.h>
+#include <wx/icon.h>
 #include <wx/button.h>
 #include <wx/tglbtn.h>
 #include <wx/radiobox.h>
 #include <wx/checkbox.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/icon.h>
 #include <wx/html/htmlwin.h>
 #include <wx/notebook.h>
 #include <wx/menu.h>
@@ -48,8 +49,11 @@ class LogViewFrameBase : public wxFrame
 	private:
 	
 	protected:
+		wxSplitterWindow* m_splitter1;
+		wxSplitterWindow* m_splitter2;
 		wxGrid* m_sessions;
 		wxTextCtrl* m_sessionInfo;
+		wxBoxSizer* m_mainSizer;
 		wxTextCtrl* m_rowInfo;
 		wxPanel* m_graph;
 		wxScrollBar* m_scrollbar;
@@ -78,9 +82,7 @@ class LogViewFrameBase : public wxFrame
 		wxCheckBox* m_limits;
 		wxCheckBox* m_scatter;
 		wxNotebook* m_statsnb;
-		wxPanel* m_panel1;
 		wxGrid* m_stats;
-		wxPanel* m_panel2;
 		wxHtmlWindow* m_stats2;
 		wxMenuBar* m_menubar;
 		wxStatusBar* m_statusBar1;
@@ -218,6 +220,23 @@ class AnalyzeFrameBase : public wxFrame
 		AnalyzeFrameBase( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Analysis"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 949,540 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
 		
 		~AnalyzeFrameBase();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class MyFrame5
+///////////////////////////////////////////////////////////////////////////////
+class MyFrame5 : public wxFrame 
+{
+	private:
+	
+	protected:
+	
+	public:
+		
+		MyFrame5( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
+		
+		~MyFrame5();
 	
 };
 
