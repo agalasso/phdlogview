@@ -96,7 +96,7 @@ if(WIN32)
   # wxWidgets
   set(wxWidgets_CONFIGURATION msw)
 
-  set (WXWIN "C:\\wxWidgets-3.0.2")
+  set (WXWIN "C:\\wxWidgets-3.0.4")
   if(NOT WXWIN OR NOT EXISTS ${WXWIN})
     message(FATAL_ERROR "The variable WXWIN should be defined and should point to a valid wxWindows installation path.")
   endif()
