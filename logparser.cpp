@@ -468,7 +468,11 @@ static void insert_info(GuideSession& session, const GuideSession::EntryVec::ite
         ++pos;
     }
     int idx = entrypos - session.entries.begin();
-    session.infos.insert(pos, { .idx = idx, .repeats = 1, .info = info });
+    InfoEntry ie;
+    ie.idx = idx;
+    ie.repeats = 1;
+    ie.info = info;
+    session.infos.insert(pos, ie);
 }
 
 static void FixupNonMonotonic(GuideSession& session)
