@@ -34,7 +34,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	wxStaticBoxSizer* sbSizer1;
 	sbSizer1 = new wxStaticBoxSizer( new wxStaticBox( panel7, wxID_ANY, wxT("Log sections") ), wxHORIZONTAL );
 	
-	m_sessions = new wxGrid( sbSizer1->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize( 294,160 ), wxBORDER_STATIC );
+	m_sessions = new wxGrid( sbSizer1->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxBORDER_STATIC );
 	
 	// Grid
 	m_sessions->CreateGrid( 8, 4 );

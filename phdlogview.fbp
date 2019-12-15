@@ -537,7 +537,7 @@
                                                                 <property name="maximum_size">-1,-1</property>
                                                                 <property name="min_size"></property>
                                                                 <property name="minimize_button">0</property>
-                                                                <property name="minimum_size"></property>
+                                                                <property name="minimum_size">-1,-1</property>
                                                                 <property name="moveable">1</property>
                                                                 <property name="name">m_sessions</property>
                                                                 <property name="pane_border">1</property>
@@ -554,7 +554,7 @@
                                                                 <property name="row_sizes"></property>
                                                                 <property name="rows">8</property>
                                                                 <property name="show">1</property>
-                                                                <property name="size">294,160</property>
+                                                                <property name="size">-1,-1</property>
                                                                 <property name="subclass"></property>
                                                                 <property name="toolbar_pane">0</property>
                                                                 <property name="tooltip"></property>
