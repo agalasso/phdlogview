@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "PHD2 Log Viewer"
-#define MyAppVersion "0.6.3"
+#define MyAppVersion "0.6.4"
 #define MyAppPublisher "Andy Galasso"
 #define MyAppURL "https://adgsoftware.com/phd2utils/"
 #define MyAppExeName "phdlogview.exe"
