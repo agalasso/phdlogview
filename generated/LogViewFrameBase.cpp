@@ -66,7 +66,9 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_sessions->SetDefaultCellBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNFACE ) );
 	m_sessions->SetDefaultCellTextColour( wxSystemSettings::GetColour( wxSYS_COLOUR_CAPTIONTEXT ) );
 	m_sessions->SetDefaultCellAlignment( wxALIGN_LEFT, wxALIGN_TOP );
-	sbSizer1->Add( m_sessions, 0, wxALL|wxEXPAND, 5 );
+	m_sessions->Hide();
+	
+	sbSizer1->Add( m_sessions, 1, wxALL|wxEXPAND|wxRESERVE_SPACE_EVEN_IF_HIDDEN, 5 );
 	
 	
 	panel7->SetSizer( sbSizer1 );

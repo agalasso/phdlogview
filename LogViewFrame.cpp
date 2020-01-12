@@ -392,6 +392,8 @@ void LogViewFrame::OpenLog(const wxString& filename)
         return;
     }
 
+    m_sessions->Hide();
+
     m_filename = filename;
 
     wxFileName fn(filename);
@@ -450,6 +452,24 @@ void LogViewFrame::OpenLog(const wxString& filename)
     m_sessions->GoToCell(0, 0);
     m_sessions->AutoSize();
     m_sessions->EndBatch();
+
+    if (s_log.sections.empty())
+    {
+        m_sessionInfo->SetValue("(empty log file)");
+    }
+    else
+    {
+        // FIXME
+        // Hack to cause graph scrollbars be displayed when grid's
+        // rows do not fit in the panel
+        {
+            int x = m_splitter1->GetSashPosition();
+            m_splitter1->SetSashPosition(x + 1);
+            m_splitter1->SetSashPosition(x);
+        } // end hack
+
+        m_sessions->Show();
+    }
 
     s_scatter.Invalidate();
     m_graph->Refresh();
