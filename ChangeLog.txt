@@ -1,3 +1,7 @@
+Version 0.6.4 - 12 Jan 2020
+        * Fix problem with log section grid scrollbars sometimes missing
+        * Fix location of right-click popup menu
+
 Version 0.6.3 - 15 Dec 2019
         * High DPI screen fixes - allow resizing panels and auto-size grids to fit content
         * handle logs with backwards timestamp jumps
