@@ -1,7 +1,7 @@
 /*
  * This file is part of phdlogview
  *
- * Copyright (C) 2016-2018 Andy Galasso
+ * Copyright (C) 2016-2020 Andy Galasso
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -579,7 +579,9 @@ void LogViewFrame::OnRightUp(wxMouseEvent& event)
         }
     }
 
-    PopupMenu(menu, m_graph->GetPosition() + event.GetPosition());
+    wxWindow *w = wxDynamicCast(event.GetEventObject(), wxWindow);
+    if (w)
+        PopupMenu(menu, ScreenToClient(w->ClientToScreen(event.GetPosition())));
 
     delete menu;
 }
