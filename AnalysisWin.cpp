@@ -85,41 +85,46 @@ struct LFit
     double Theta() const { return n >= 2. ? atan2(covxy, varx) : 0.; }
 };
 
+inline static bool Include(const GuideEntry& e)
+{
+    return e.included && StarWasFound(e.err);
+}
+
 static double DecDrift(const GuideSession::EntryVec& entries)
 {
-    LFit fit;
-
     if (entries.size() < 2)
         return 0.;
 
-    double y_accum = 0.;
     auto it = entries.begin();
+    for (; it != entries.end(); ++it)
+        if (Include(*it))
+            break;
+    if (it == entries.end())
+        return 0.;
+
+    double y_accum = 0.;
     double prev_y = it->decraw;
     bool prev_guided = it->decdur != 0;
-    bool prev_included = it->included;
-    if (StarWasFound(it->err) && it->included)
-        fit.data(it->dt, y_accum);
+
+    LFit fit;
+
+    fit.data(it->dt, y_accum);
     ++it;
 
     for (; it != entries.end(); ++it)
     {
-        bool included = it->included;
-        if (included)
-        {
-            if (!StarWasFound(it->err))
-                continue;
+        if (!Include(*it))
+            continue;
 
-            double y = it->decraw;
-            if (!prev_guided && prev_included)
-            {
-                double dy = y - prev_y;
-                y_accum += dy;
-                fit.data(it->dt, y_accum);
-            }
-            prev_y = y;
-            prev_guided = it->decdur != 0;
+        double y = it->decraw;
+        if (!prev_guided)
+        {
+            double dy = y - prev_y;
+            y_accum += dy;
+            fit.data(it->dt, y_accum);
         }
-        prev_included = included;
+        prev_y = y;
+        prev_guided = it->decdur != 0;
     }
 
     return fit.B();
@@ -129,24 +134,27 @@ static double RaDrift(const GuideSession::EntryVec& entries)
 {
     // estimate RA drift = (RA offset + sum of RA corrections) / time
 
+    bool found = false;
     double ra0, t0;
     auto it = entries.begin();
     for (; it != entries.end(); ++it)
     {
-        if (it->included)
+        if (Include(*it))
         {
             ra0 = it->raraw;
             t0 = it->dt;
+            found = true;
             break;
         }
     }
 
-    if (it == entries.end())
+    if (!found)
         return 0.;
 
     double sum = 0.;
     for (; it != entries.end(); ++it)
     {
+        // dropped frames may have ra corrections
         if (it->included)
             sum += it->radur ? it->raguide : 0.;
     }
@@ -154,7 +162,7 @@ static double RaDrift(const GuideSession::EntryVec& entries)
     double ra1, t1;
     for (auto itr = entries.rbegin(); itr != entries.rend(); ++itr)
     {
-        if (itr->included)
+        if (Include(*itr))
         {
             ra1 = itr->raraw;
             t1 = itr->dt;
@@ -180,7 +188,7 @@ void GuideSession::CalcStats()
     for (auto it = entries.begin(); it != entries.end(); ++it)
     {
         const GuideEntry& e = *it;
-        if (!e.included)
+        if (!Include(e))
             continue;
 
         fitrd.data(e.raraw, e.decraw);
@@ -209,7 +217,7 @@ void GuideSession::CalcStats()
     for (auto it = entries.begin(); it != entries.end(); ++it)
     {
         const GuideEntry& e = *it;
-        if (!e.included)
+        if (!Include(e))
             continue;
 
         double dr = e.raraw - avg_ra;
@@ -251,11 +259,6 @@ struct Line
     }
     double operator()(double x) { return a + b * x; }
 };
-
-inline static bool Include(const GuideEntry& e)
-{
-    return e.included && StarWasFound(e.err);
-}
 
 bool GARun::CanAnalyze(const GuideSession& session, size_t begin, size_t end)
 {
