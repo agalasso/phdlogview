@@ -625,6 +625,7 @@ static void InitStats(wxGrid *stats, wxHtmlWindow *stats2, const GuideSession *s
     stats->SetCellValue(2, 0, wxString::Format("% .2f\" (%.2f px)", session->pixelScale * tot, tot));
     stats->SetCellValue(0, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_ra, session->peak_ra));
     stats->SetCellValue(1, 1, wxString::Format("% .2f\" (% .2f px)", session->pixelScale * session->peak_dec, session->peak_dec));
+    stats->SetCellValue(2, 1, wxString::Format(" Elong.: %.f%%", session->elongation * 100.));
     stats->AutoSize();
     stats->EndBatch();
 
@@ -1894,12 +1895,26 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
                 }
             }
 
-            mdc.SetPen(wxPen(wxColour(255, 0, 255), 1/*, wxDOT*/));
-            mdc.SetBrush(*wxTRANSPARENT_BRUSH);
-            double rx = m_session->rms_ra;
-            double ry = m_session->rms_dec;
-            int r = (int)(hypot(rx, ry)  * scale);
-            mdc.DrawCircle(h / 2, h / 2, r);
+            // draw an ellipse showing the elongation
+            {
+                double const expand = 3.0;
+                double ew = m_session->l2 * scale * expand;
+                double ehw = ew * 0.5;
+                double eh = m_session->l1 * scale * expand;
+                double ehh = eh * 0.5;
+
+                wxGraphicsContext *gc = wxGraphicsContext::Create(mdc);
+
+                gc->Translate(h / 2 + m_session->avg_ra * scale, h / 2 - m_session->avg_dec * scale);
+                gc->Rotate(-m_session->theta);
+
+                gc->SetPen(wxPen(wxColour(255, 32, 255), 1));
+                gc->DrawEllipse(-ehw, -ehh, ew, eh);
+                gc->StrokeLine(-ehw * 1.5, 0.0, ehw * 1.5, 0.0);
+                gc->StrokeLine(0.0, -ehh * 1.5, 0.0, ehh * 1.5);
+
+                delete gc;
+            }
 
             s_scatter.valid = true;
         }

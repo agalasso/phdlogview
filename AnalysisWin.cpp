@@ -58,8 +58,8 @@ double Spline::Eval(double x) const
 
 struct LFit
 {
-    double avx, avy, varx, covxy, n;
-    LFit() : avx(0.), avy(0.), varx(0.), covxy(0.), n(0.) { }
+    double avx, avy, varx, covxy, vary, n;
+    LFit() : avx(0.), avy(0.), varx(0.), covxy(0.), vary(0.), n(0.) { }
     void data(double x, double y) {
         double k = n;
         n += 1.0;
@@ -68,18 +68,21 @@ struct LFit
         double dy = y - avy;
         varx += (k * dx * dx - varx) / n;
         covxy += (k * dx * dy - covxy) / n;
+        vary += (k * dy * dy - vary) / n;
         avx += dx / n;
         avy += dy / n;
     }
     void reset() {
-        avx = avy = varx = covxy = n = 0.;
+        avx = avy = varx = covxy = vary = n = 0.;
     }
+    // y = a + b x
     double B() const { return n >= 2. ? covxy / varx : 0.; }
     double A() const { return avy - B() * avx; }
     void result(double *a, double *b) const {
         *b = B();
         *a = avy - *b * avx;
     }
+    double Theta() const { return n >= 2. ? atan2(covxy, varx) : 0.; }
 };
 
 static double DecDrift(const GuideSession::EntryVec& entries)
@@ -171,38 +174,60 @@ static double PolarAlignError(const GuideSession& session)
 
 void GuideSession::CalcStats()
 {
-    double n = 0.;
-    double vr = 0., avr = 0., vd = 0., avd = 0.;
+    LFit fitrd;
     double peak_r = 0., peak_d = 0.;
 
     for (auto it = entries.begin(); it != entries.end(); ++it)
     {
         const GuideEntry& e = *it;
-        if (e.included)
-        {
-            double k = n;
-            n += 1.0;
-            k /= n;
+        if (!e.included)
+            continue;
 
-            double dr = e.raraw - avr;
-            vr += (k * dr * dr - vr) / n;
-            avr += dr / n;
+        fitrd.data(e.raraw, e.decraw);
 
-            double dd = e.decraw - avd;
-            vd += (k * dd * dd - vd) / n;
-            avd += dd / n;
-
-            if (fabs(e.raraw) > fabs(peak_r))
-                peak_r = e.raraw;
-            if (fabs(e.decraw) > fabs(peak_d))
-                peak_d = e.decraw;
-        }
+        if (fabs(e.raraw) > fabs(peak_r))
+            peak_r = e.raraw;
+        if (fabs(e.decraw) > fabs(peak_d))
+            peak_d = e.decraw;
     }
 
-    rms_ra = sqrt(vr);
-    rms_dec = sqrt(vd);
+    rms_ra = sqrt(fitrd.varx);
+    rms_dec = sqrt(fitrd.vary);
+    avg_ra = fitrd.avx;
+    avg_dec = fitrd.avy;
     peak_ra = peak_r;
     peak_dec = peak_d;
+
+    // angle of elongation
+    theta = fitrd.Theta();
+
+    // now get variances of the transformed coordinates offset by the
+    // mean and rotated by theta
+    double cost = cos(theta), sint = sin(theta);
+
+    LFit fitxy;
+    for (auto it = entries.begin(); it != entries.end(); ++it)
+    {
+        const GuideEntry& e = *it;
+        if (!e.included)
+            continue;
+
+        double dr = e.raraw - avg_ra;
+        double dd = e.decraw - avg_dec;
+        double x = dr * cost + dd * sint;
+        double y = dd * cost - dr * sint;
+
+        fitxy.data(x, y);
+    }
+
+    l1 = sqrt(fitxy.varx);
+    l2 = sqrt(fitxy.vary);
+    if (l2 < l1)
+        std::swap(l1, l2);
+
+    elongation = (l2 + l1) > 1e-6 ?
+            (l2 - l1) / (l2 + l1) :
+            1.;
 
     drift_ra = RaDrift(entries) * 60.;   // pixels per minute
     drift_dec = DecDrift(entries) * 60.;

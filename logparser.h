@@ -155,6 +155,10 @@ struct GuideSession : public LogSection
     // computed stats
     double rms_ra;
     double rms_dec;
+    double avg_ra, avg_dec; // mean ra and dec
+    double theta;  // angle of elongation
+    double l1, l2; // ellipse minor/major axes
+    double elongation;
     double peak_ra;
     double peak_dec;
     double drift_ra;    // pixels per minute
