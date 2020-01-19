@@ -1898,9 +1898,9 @@ void LogViewFrame::OnPaintGraph(wxPaintEvent& event)
             // draw an ellipse showing the elongation
             {
                 double const expand = 3.0;
-                double ew = m_session->l2 * scale * expand;
+                double ew = m_session->lx * scale * expand;
                 double ehw = ew * 0.5;
-                double eh = m_session->l1 * scale * expand;
+                double eh = m_session->ly * scale * expand;
                 double ehh = eh * 0.5;
 
                 wxGraphicsContext *gc = wxGraphicsContext::Create(mdc);

@@ -228,14 +228,18 @@ void GuideSession::CalcStats()
         fitxy.data(x, y);
     }
 
-    l1 = sqrt(fitxy.varx);
-    l2 = sqrt(fitxy.vary);
-    if (l2 < l1)
-        std::swap(l1, l2);
+    lx = sqrt(fitxy.varx);
+    ly = sqrt(fitxy.vary);
 
-    elongation = (l2 + l1) > 1e-6 ?
-            (l2 - l1) / (l2 + l1) :
-            1.;
+    {
+        double a = lx, b = ly;
+        if (a < b)
+            std::swap(a, b);
+
+        elongation = (a + b) > 1e-6 ?
+                (a - b) / (a + b) :
+                1.;
+    }
 
     drift_ra = RaDrift(entries) * 60.;   // pixels per minute
     drift_dec = DecDrift(entries) * 60.;

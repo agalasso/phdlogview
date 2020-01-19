@@ -156,8 +156,8 @@ struct GuideSession : public LogSection
     double rms_ra;
     double rms_dec;
     double avg_ra, avg_dec; // mean ra and dec
-    double theta;  // angle of elongation
-    double l1, l2; // ellipse minor/major axes
+    double theta;  // angle of elongation elipse x-axis
+    double lx, ly; // ellipse axes
     double elongation;
     double peak_ra;
     double peak_dec;
