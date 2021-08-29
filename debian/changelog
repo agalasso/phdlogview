@@ -1,0 +1,12 @@
+phdlogview (0.6.3) buster; urgency=medium
+
+  * Upstream release
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sun, 29 Aug 2021 10:01:49 +0000
+
+phdlogview (0.6.2) buster; urgency=medium
+
+  * Initial release
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 19 Oct 2019 23:00:00 +0200
+
