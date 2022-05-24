@@ -1,0 +1,15 @@
+Source: phdlogview
+Section: education
+Priority: optional
+Maintainer: Radek Kaczorek <rkaczorek@gmail.com>
+Build-Depends: debhelper (>= 9), cmake, libwxgtk3.0-gtk3-dev, libwxgtk-media3.0-gtk3-dev
+Standards-Version: 3.9.5
+
+Package: phdlogview
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: phd2
+Description: PHD2 Log Viewer
+ PHD2 Log Viewer is a tool for quickly visualizing your guiding
+ performance and spotting problems in your PHD2 Guide Log.
+
