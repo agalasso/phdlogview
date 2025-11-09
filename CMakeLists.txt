@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU General Public License along
 #  with this program; if not, visit the http://fsf.org website.
 
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 3.24)
 
 # this must appear very early in the file
 if (WIN32)
@@ -31,24 +31,8 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 if(APPLE)
-  set(APPLE_ARCH "x86_64" CACHE STRING "Apple architecture: i386 or x86_64")
-  if(APPLE_ARCH MATCHES "^i386")
-    message(STATUS "configuring to build a 32-bit phdlogview")
-    set(APPLE32 1)
-  elseif(APPLE_ARCH MATCHES "^x86_64")
-    message(STATUS "configuring to build a 64-bit phdlogview")
-    SET(APPLE32 0)
-  else()
-    message(FATAL_ERROR "APPLE_ARCH must be i386 or x86_64")
-  endif()
-  if(APPLE32)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "Minimum OSX deployment version")
-    set(CMAKE_OSX_ARCHITECTURES i386 CACHE STRING "build architecture for OSX" FORCE)
-  else()
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OSX deployment version")
-  endif()
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OSX deployment version")
   set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
-  set(CMAKE_CXX_STANDARD 11)
 endif()
 
 project (phdlogview)
@@ -80,11 +64,6 @@ include(CheckCXXCompilerFlag)
 if(WIN32)
   set(FIND_LIBRARY_USE_LIB64_PATHS FALSE)
   #set(CMAKE_LIBRARY_ARCHITECTURE x86)
-elseif(APPLE32)
-  check_cxx_compiler_flag(-stdlib=libc++ HAS_LIBCXX11_FLAG)
-  if(HAS_LIBCXX11_FLAG)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-  endif()
 elseif(NOT APPLE)
   # c++11 options
   check_cxx_compiler_flag(-std=c++11 HAS_CXX11_FLAG)
