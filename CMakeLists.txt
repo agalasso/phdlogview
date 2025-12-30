@@ -168,6 +168,16 @@ set (ALL_SRC
 if(WIN32)
   add_executable(phdlogview WIN32 ${ALL_SRC})
 elseif(APPLE)
+  # MacOSX bundle definitions - used to generate Info.plist
+  set(MACOSX_BUNDLE_BUNDLE_NAME          phdlogview)
+  set(MACOSX_BUNDLE_GUI_IDENTIFIER       "com.adgsoftware.phdlogview" )
+  set(MACOSX_BUNDLE_ICON_FILE            phdlogview.ico )
+  set(MACOSX_BUNDLE_INFO_STRING          "PHD2 Log Viewer, Copyright 2016-2025 Andy Galasso" )
+  set(MACOSX_BUNDLE_SHORT_VERSION_STRING "0.6.4" )
+  set(MACOSX_BUNDLE_LONG_VERSION_STRING  "0.6.4" )
+  set(MACOSX_BUNDLE_BUNDLE_VERSION       "0.6.4" )
+  set(MACOSX_BUNDLE_COPYRIGHT            "(C) 2016-2025 Andy Galasso" )
+
   add_executable(phdlogview MACOSX_BUNDLE ${ALL_SRC})
 elseif(UNIX)
   add_executable(phdlogview ${ALL_SRC})
