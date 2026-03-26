@@ -31,7 +31,12 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OSX deployment version")
+  if(NOT DEFINED CMAKE_OSX_ARCHITECTURES)
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS target architectures")
+  endif()
+  if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OSX deployment version")
+  endif()
   set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
 endif()
 
@@ -208,7 +213,7 @@ if(WIN32)
 else()
   find_package(GSL REQUIRED)
   if(APPLE)
-    # force static loining on OSX to avoid redistributing GSL .dylib files
+    # force static linking on OSX to avoid redistributing GSL .dylib files
     # this is a hack... what's the real way to do this in CMake?
     string(REPLACE ".dylib" ".a" GSL_LIBRARIES "${GSL_LIBRARIES}")
     set(APP_LINK_EXTERNAL ${APP_LINK_EXTERNAL} ${GSL_LIBRARIES})
