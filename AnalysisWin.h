@@ -60,6 +60,7 @@ class AnalysisWin : public AnalyzeFrameBase
 public:
     GARun m_garun;
     int m_cursor;
+    wxButton* m_saveCSV;
 
 public:
     AnalysisWin(LogViewFrame *parent);
@@ -91,6 +92,7 @@ private:
     void OnVMinus(wxCommandEvent& event) override;
     void OnVPlus(wxCommandEvent& event) override;
     void OnVReset(wxCommandEvent& event) override;
+    void OnSaveCSV(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };
