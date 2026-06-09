@@ -28,6 +28,9 @@
 #include <gsl/gsl_fft_complex.h>
 #include <gsl/gsl_spline.h>
 #include <wx/dcbuffer.h>
+#include <wx/file.h>
+#include <wx/filedlg.h>
+#include <wx/msgdlg.h>
 
 void Spline::Init(const double *x, const double *y, size_t n)
 {
@@ -624,6 +627,13 @@ AnalysisWin::AnalysisWin(LogViewFrame *parent)
     LoadGeometry(this, "/geometry.awin");
 
     m_graph->Connect(wxEVT_MOUSE_CAPTURE_LOST, wxMouseCaptureLostEventHandler(AnalysisWin::OnCaptureLost), nullptr, this);
+
+    // Add "Save CSV" button to the top toolbar; visible only in Frequency Analysis mode
+    wxSizer* topSizer = GetSizer()->GetItem((size_t)0)->GetSizer();
+    m_saveCSV = new wxButton(this, wxID_ANY, _("Save CSV"));
+    topSizer->Add(m_saveCSV, 0, wxALL, 5);
+    m_saveCSV->Hide(); // hidden initially (Drift view is active by default)
+    m_saveCSV->Bind(wxEVT_BUTTON, &AnalysisWin::OnSaveCSV, this);
 }
 
 AnalysisWin::~AnalysisWin()
@@ -725,6 +735,7 @@ void AnalysisWin::OnClickDrift(wxCommandEvent& event)
     m_graph->Refresh();
     m_ra->Show();
     m_dec->Show();
+    m_saveCSV->Hide();
     m_statusBar->SetStatusText(wxEmptyString);
     Layout(); // in case size changed
 }
@@ -735,7 +746,39 @@ void AnalysisWin::OnClickFFT(wxCommandEvent& event)
     m_graph->Refresh();
     m_ra->Hide();
     m_dec->Hide();
+    m_saveCSV->Show();
     m_statusBar->SetStatusText(wxEmptyString);
+    Layout();
+}
+
+void AnalysisWin::OnSaveCSV(wxCommandEvent& event)
+{
+    if (m_garun.nfft == 0)
+        return;
+
+    wxFileDialog dlg(this, _("Save Frequency Analysis CSV"), wxEmptyString,
+        wxString::Format("fft_%s.csv", m_garun.starts.Format("%Y%m%d_%H%M%S")),
+        _("CSV files (*.csv)|*.csv|All files (*.*)|*.*"),
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+    if (dlg.ShowModal() != wxID_OK)
+        return;
+
+    wxFile f;
+    if (!f.Open(dlg.GetPath(), wxFile::write))
+    {
+        wxMessageBox(_("Could not open file for writing."), _("Error"), wxOK | wxICON_ERROR, this);
+        return;
+    }
+
+    f.Write("Period (s),Amplitude (px),Amplitude (\")\n");
+    for (size_t i = 0; i < m_garun.nfft; i++)
+    {
+        f.Write(wxString::Format("%.4f,%.6f,%.6f\n",
+            m_garun.fftx[i],
+            m_garun.ffty[i],
+            m_garun.ffty[i] * m_garun.pixscale));
+    }
 }
 
 static void HZoom(AnalysisWin *aw, double f, int center)
