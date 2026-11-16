@@ -107,7 +107,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	bSizer10->Add( m_rowInfo, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	m_mainSizer->Add( bSizer10, 0, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
+	m_mainSizer->Add( bSizer10, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer( wxHORIZONTAL );
@@ -142,23 +142,23 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	bSizer5->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_hminus = new wxButton( panel6, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hminus = new wxButton( panel6, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_hminus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_hminus->SetToolTip( wxT("Zoom out") );
 	
 	bSizer5->Add( m_hminus, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
 	
-	m_hplus = new wxButton( panel6, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hplus = new wxButton( panel6, wxID_ANY, wxT("+"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_hplus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_hplus->SetToolTip( wxT("Zoom in") );
 	
-	bSizer5->Add( m_hplus, 0, wxALL, 5 );
+	bSizer5->Add( m_hplus, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
 	
-	m_hreset = new wxButton( panel6, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hreset = new wxButton( panel6, wxID_ANY, wxT("R"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_hreset->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_hreset->SetToolTip( wxT("Reset zoom") );
 	
-	bSizer5->Add( m_hreset, 0, wxALL, 5 );
+	bSizer5->Add( m_hreset, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
 	
 	
 	bSizer5->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -180,35 +180,35 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	
 	bSizer3->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_vplus = new wxButton( panel6, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vplus = new wxButton( panel6, wxID_ANY, wxT("+"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_vplus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_vplus->SetToolTip( wxT("Zoom in") );
 	
-	bSizer3->Add( m_vplus, 0, wxALL, 5 );
+	bSizer3->Add( m_vplus, 0, wxALL|wxEXPAND, 5 );
 	
-	m_vminus = new wxButton( panel6, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vminus = new wxButton( panel6, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_vminus->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_vminus->SetToolTip( wxT("Zoom out") );
 	
-	bSizer3->Add( m_vminus, 0, wxALL, 5 );
+	bSizer3->Add( m_vminus, 0, wxALL|wxEXPAND, 5 );
 	
-	m_vreset = new wxButton( panel6, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vreset = new wxButton( panel6, wxID_ANY, wxT("R"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_vreset->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_BTNTEXT ) );
 	m_vreset->SetToolTip( wxT("Reset zoom") );
 	
-	bSizer3->Add( m_vreset, 0, wxALL, 5 );
+	bSizer3->Add( m_vreset, 0, wxALL|wxEXPAND, 5 );
 	
-	m_vpan = new wxToggleButton( panel6, wxID_ANY, wxT("P/&Z"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vpan = new wxToggleButton( panel6, wxID_ANY, wxT("P/&Z"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_vpan->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 	m_vpan->SetToolTip( wxT("Pan / Zoom") );
 	
-	bSizer3->Add( m_vpan, 0, wxALL, 5 );
+	bSizer3->Add( m_vpan, 0, wxALL|wxEXPAND, 5 );
 	
-	m_vlock = new wxToggleButton( panel6, wxID_ANY, wxT("L"), wxDefaultPosition, wxSize( 30,25 ), 0 );
+	m_vlock = new wxToggleButton( panel6, wxID_ANY, wxT("L"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	m_vlock->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 	m_vlock->SetToolTip( wxT("Lock vertical scale, use the same scale for all guiding sessions") );
 	
-	bSizer3->Add( m_vlock, 0, wxALL, 5 );
+	bSizer3->Add( m_vlock, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer3->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -246,7 +246,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_axes->SetSelection( 0 );
 	m_axes->SetToolTip( wxT("Select camera axes (dx/dy) or Mount axes (RA/Dec)") );
 	
-	sbSizer4->Add( m_axes, 0, wxALIGN_LEFT|wxALIGN_RIGHT|wxBOTTOM|wxALIGN_CENTER_VERTICAL, 5 );
+	sbSizer4->Add( m_axes, 0, wxBOTTOM|wxALIGN_CENTER_VERTICAL, 5 );
 	
 	wxBoxSizer* bSizer12;
 	bSizer12 = new wxBoxSizer( wxVERTICAL );
@@ -255,7 +255,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_corrections->SetValue(true); 
 	m_corrections->SetToolTip( wxT("Plot guide pulses") );
 	
-	bSizer12->Add( m_corrections, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer12->Add( m_corrections, 0, wxALL, 5 );
 	
 	m_grid = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("Grid"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_grid->SetValue(true); 
@@ -290,12 +290,12 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_mass = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("Star mass"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_mass->SetToolTip( wxT("Plot star mass value (guide star intensity)") );
 	
-	bSizer101->Add( m_mass, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer101->Add( m_mass, 0, wxALL, 5 );
 	
 	m_snr = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("SNR"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_snr->SetToolTip( wxT("Plot star SNR (signal-to-noise ratio)") );
 	
-	bSizer101->Add( m_snr, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer101->Add( m_snr, 0, wxALL, 5 );
 	
 	
 	sbSizer4->Add( bSizer101, 0, wxALIGN_CENTER_VERTICAL, 5 );
@@ -307,7 +307,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_events->SetValue(true); 
 	m_events->SetToolTip( wxT("Plot events, including guide parameter changes, server commands received, and star lost events") );
 	
-	bSizer11->Add( m_events, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer11->Add( m_events, 0, wxALL, 5 );
 	
 	m_limits = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_limits->SetToolTip( wxT("Plot the min-motion and max-duration levels") );
@@ -714,14 +714,14 @@ AnalyzeFrameBase::AnalyzeFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	wxBoxSizer* bSizer30;
 	bSizer30 = new wxBoxSizer( wxVERTICAL );
 	
-	m_vplus = new wxButton( this, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
-	bSizer30->Add( m_vplus, 0, wxALL, 5 );
+	m_vplus = new wxButton( this, wxID_ANY, wxT("+"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
+	bSizer30->Add( m_vplus, 0, wxALL|wxEXPAND, 5 );
 	
-	m_vminus = new wxButton( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
-	bSizer30->Add( m_vminus, 0, wxALL, 5 );
+	m_vminus = new wxButton( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
+	bSizer30->Add( m_vminus, 0, wxALL|wxEXPAND, 5 );
 	
-	m_vreset = new wxButton( this, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
-	bSizer30->Add( m_vreset, 0, wxALL, 5 );
+	m_vreset = new wxButton( this, wxID_ANY, wxT("R"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
+	bSizer30->Add( m_vreset, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer29->Add( bSizer30, 0, wxALIGN_CENTER_VERTICAL, 5 );
@@ -752,13 +752,13 @@ AnalyzeFrameBase::AnalyzeFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	wxBoxSizer* bSizer271;
 	bSizer271 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_hminus = new wxButton( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hminus = new wxButton( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	bSizer271->Add( m_hminus, 0, wxALL, 5 );
 	
-	m_hplus = new wxButton( this, wxID_ANY, wxT("+"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hplus = new wxButton( this, wxID_ANY, wxT("+"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	bSizer271->Add( m_hplus, 0, wxALL, 5 );
 	
-	m_hreset = new wxButton( this, wxID_ANY, wxT("R"), wxDefaultPosition, wxSize( 30,-1 ), 0 );
+	m_hreset = new wxButton( this, wxID_ANY, wxT("R"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 	bSizer271->Add( m_hreset, 0, wxALL, 5 );
 	
 	
@@ -768,7 +768,7 @@ AnalyzeFrameBase::AnalyzeFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	bSizer28->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	
-	bSizer25->Add( bSizer28, 0, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
+	bSizer25->Add( bSizer28, 0, wxEXPAND, 5 );
 	
 	
 	this->SetSizer( bSizer25 );
