@@ -914,7 +914,7 @@
                                     <property name="permission">protected</property>
                                     <object class="sizeritem" expanded="0">
                                         <property name="border">5</property>
-                                        <property name="flag">wxALIGN_CENTER_HORIZONTAL|wxEXPAND</property>
+                                        <property name="flag">wxEXPAND</property>
                                         <property name="proportion">0</property>
                                         <object class="wxBoxSizer" expanded="0">
                                             <property name="minimum_size"></property>
@@ -2631,7 +2631,7 @@
                                                     </object>
                                                     <object class="sizeritem" expanded="0">
                                                         <property name="border">5</property>
-                                                        <property name="flag">wxALIGN_LEFT|wxALIGN_RIGHT|wxBOTTOM|wxALIGN_CENTER_VERTICAL</property>
+                                                        <property name="flag">wxBOTTOM|wxALIGN_CENTER_VERTICAL</property>
                                                         <property name="proportion">0</property>
                                                         <object class="wxRadioBox" expanded="0">
                                                             <property name="BottomDockable">1</property>
@@ -2737,7 +2737,7 @@
                                                             <property name="permission">none</property>
                                                             <object class="sizeritem" expanded="0">
                                                                 <property name="border">5</property>
-                                                                <property name="flag">wxALL|wxALIGN_CENTER_VERTICAL</property>
+                                                                <property name="flag">wxALL</property>
                                                                 <property name="proportion">0</property>
                                                                 <object class="wxCheckBox" expanded="0">
                                                                     <property name="BottomDockable">1</property>
@@ -3139,7 +3139,7 @@
                                                             <property name="permission">none</property>
                                                             <object class="sizeritem" expanded="0">
                                                                 <property name="border">5</property>
-                                                                <property name="flag">wxALL|wxALIGN_CENTER_VERTICAL</property>
+                                                                <property name="flag">wxALL</property>
                                                                 <property name="proportion">0</property>
                                                                 <object class="wxCheckBox" expanded="0">
                                                                     <property name="BottomDockable">1</property>
@@ -3234,7 +3234,7 @@
                                                             </object>
                                                             <object class="sizeritem" expanded="0">
                                                                 <property name="border">5</property>
-                                                                <property name="flag">wxALL|wxALIGN_CENTER_VERTICAL</property>
+                                                                <property name="flag">wxALL</property>
                                                                 <property name="proportion">0</property>
                                                                 <object class="wxCheckBox" expanded="0">
                                                                     <property name="BottomDockable">1</property>
@@ -3340,7 +3340,7 @@
                                                             <property name="permission">none</property>
                                                             <object class="sizeritem" expanded="0">
                                                                 <property name="border">5</property>
-                                                                <property name="flag">wxALL|wxALIGN_CENTER_VERTICAL</property>
+                                                                <property name="flag">wxALL</property>
                                                                 <property name="proportion">0</property>
                                                                 <object class="wxCheckBox" expanded="0">
                                                                     <property name="BottomDockable">1</property>
@@ -6588,7 +6588,7 @@
                 </object>
                 <object class="sizeritem" expanded="0">
                     <property name="border">5</property>
-                    <property name="flag">wxALIGN_CENTER_HORIZONTAL|wxEXPAND</property>
+                    <property name="flag">wxEXPAND</property>
                     <property name="proportion">0</property>
                     <object class="wxBoxSizer" expanded="0">
                         <property name="minimum_size"></property>

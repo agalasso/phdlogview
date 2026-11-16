@@ -107,7 +107,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	bSizer10->Add( m_rowInfo, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	m_mainSizer->Add( bSizer10, 0, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
+	m_mainSizer->Add( bSizer10, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer( wxHORIZONTAL );
@@ -246,7 +246,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_axes->SetSelection( 0 );
 	m_axes->SetToolTip( wxT("Select camera axes (dx/dy) or Mount axes (RA/Dec)") );
 	
-	sbSizer4->Add( m_axes, 0, wxALIGN_LEFT|wxALIGN_RIGHT|wxBOTTOM|wxALIGN_CENTER_VERTICAL, 5 );
+	sbSizer4->Add( m_axes, 0, wxBOTTOM|wxALIGN_CENTER_VERTICAL, 5 );
 	
 	wxBoxSizer* bSizer12;
 	bSizer12 = new wxBoxSizer( wxVERTICAL );
@@ -255,7 +255,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_corrections->SetValue(true); 
 	m_corrections->SetToolTip( wxT("Plot guide pulses") );
 	
-	bSizer12->Add( m_corrections, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer12->Add( m_corrections, 0, wxALL, 5 );
 	
 	m_grid = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("Grid"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_grid->SetValue(true); 
@@ -290,12 +290,12 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_mass = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("Star mass"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_mass->SetToolTip( wxT("Plot star mass value (guide star intensity)") );
 	
-	bSizer101->Add( m_mass, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer101->Add( m_mass, 0, wxALL, 5 );
 	
 	m_snr = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("SNR"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_snr->SetToolTip( wxT("Plot star SNR (signal-to-noise ratio)") );
 	
-	bSizer101->Add( m_snr, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer101->Add( m_snr, 0, wxALL, 5 );
 	
 	
 	sbSizer4->Add( bSizer101, 0, wxALIGN_CENTER_VERTICAL, 5 );
@@ -307,7 +307,7 @@ LogViewFrameBase::LogViewFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	m_events->SetValue(true); 
 	m_events->SetToolTip( wxT("Plot events, including guide parameter changes, server commands received, and star lost events") );
 	
-	bSizer11->Add( m_events, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer11->Add( m_events, 0, wxALL, 5 );
 	
 	m_limits = new wxCheckBox( sbSizer4->GetStaticBox(), wxID_ANY, wxT("Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_limits->SetToolTip( wxT("Plot the min-motion and max-duration levels") );
@@ -768,7 +768,7 @@ AnalyzeFrameBase::AnalyzeFrameBase( wxWindow* parent, wxWindowID id, const wxStr
 	bSizer28->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	
-	bSizer25->Add( bSizer28, 0, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
+	bSizer25->Add( bSizer28, 0, wxEXPAND, 5 );
 	
 	
 	this->SetSizer( bSizer25 );
